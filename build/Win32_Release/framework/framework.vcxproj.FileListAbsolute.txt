@@ -1,0 +1,1 @@
+E:\[Sync]\Aalto\Advanced Computer Graphics\A1\assignment1\build\Win32_Release\framework\framework.lib

@@ -1,4 +1,4 @@
-	#pragma once
+#pragma once
 
 #include "3d/CameraControls.hpp"
 #include "3d/Mesh.hpp"

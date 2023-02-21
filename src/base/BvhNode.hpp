@@ -18,7 +18,7 @@ class Bvh;
 
 // The only real functionality of BvhNode is the save/load feature, otherwise it's a simple data holder.
 struct BvhNode : noncopyable {
-    AABB bb;    // Axis-aligned bounding box
+    AABB bb;
     size_t startPrim, endPrim; // [start, end)
     std::unique_ptr<BvhNode> left;
     std::unique_ptr<BvhNode> right;

@@ -93,13 +93,46 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     // function with the given ray and your root node. You can also use this
     // function to do one-off things per ray like finding the elementwise
     // reciprocal of the ray direction.
+
     FW::F32 distance = dir.length();
     Vec3f reci_dir = 1.0f / dir.normalized();
     return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
 
+
 }
 RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
     RaycastResult castresult;
+    if (!node.left && !node.right) {
+        //Do traversal in a leaf node
+        float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
+        int closest_i = -1;
+
+        // Naive loop over all triangles; this will give you the correct results,
+        // but is terribly slow when ran for all triangles for each ray. Try it.
+        for (int i = node.startPrim; i < node.endPrim; ++i)
+        {
+            float t, u, v;
+            if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
+            {
+                if (t > 0.0f && t < closest_t)
+                {
+                    closest_i = i;
+                    closest_t = t;
+                    closest_u = u;
+                    closest_v = v;
+                }
+            }
+        }
+        if (closest_i != -1)
+            castresult = RaycastResult(&(*m_triangles)[m_bvh.getIndex(closest_i)], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+
+        if (m_rayCount.load() == 300000) {
+            FW::printVec3f("castResult: closest_t ", closest_t);
+        }
+        return castresult;
+    }
+    
+    
     ////Check each dimention if parallel
     //for (int i = 0; i < 3; ++i) {
     //    if((orig[i] == 0.0f && orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
@@ -133,49 +166,19 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
     }
 
     if (tstart > tend || tend < 0) {
+        //No Intersections
         return castresult;
     }
 
-    if (node.hasChildren()) {
-        //Go deeper
-        auto resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
-        if (resultL.tri != nullptr) return resultL;
-        auto resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
-        if (resultR.tri != nullptr) return resultR;
-    }
+    //Go deeper
+    RaycastResult resultL, resultR;
+    if(node.left)
+        resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+    if(node.right)
+        resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
 
-    // Else do leaf triangles traversal
-    
-    // You can use this existing code for leaf nodes of the BVH (you do want to
-    // change the range of the loop to match the elements the leaf covers.)
-    float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
-    int closest_i = -1;
-
-    // Naive loop over all triangles; this will give you the correct results,
-    // but is terribly slow when ran for all triangles for each ray. Try it.
-    for (int i = node.startPrim ; i < node.endPrim; ++i)
-    {
-        float t, u, v;
-        if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
-        {
-            if (t > 0.0f && t < closest_t)
-            {
-                closest_i = i;
-                closest_t = t;
-                closest_u = u;
-                closest_v = v;
-            }
-        }
-    }
-
-    if (closest_i != -1)
-        castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
-
-    if (m_rayCount.load() == 300000) {
-        FW::printVec3f("castResult: closest_t ", closest_t);
-    }
-
-    return castresult;
+    return resultL.t < resultR.t ? resultL: resultR;
+     
 }
 
 

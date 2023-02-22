@@ -81,9 +81,11 @@ void RayTracer::constructHierarchy(std::vector<RTTriangle>& triangles, SplitMode
     // YOUR CODE HERE (R1):
     // This is where you should construct your BVH.
     m_triangles = &triangles;
+
+
+    printf("Construct BVH \n");
+    m_bvh.construct(triangles, splitMode);
 }
-
-
 RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
 	++m_rayCount;
 

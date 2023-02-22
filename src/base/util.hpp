@@ -56,5 +56,10 @@ inline F32& maxcoord(Vec3f& v) {
 	return filtcoord(v, [](float a, float b) { return a >= b; });
 }
 
-
+inline void printVec3f(const std::string s,const FW::Vec3f v) {
+	FW::printf("%s: %f, %f, %f \n", s, v.x, v.y, v.z);
+}
+inline void printVec3f(const FW::Vec3f v) {
+	FW::printf("%f, %f, %f \n", v.x, v.y, v.z);
+}
 }

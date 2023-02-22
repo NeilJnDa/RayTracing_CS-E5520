@@ -120,7 +120,7 @@ void Bvh::constructIterator(std::unique_ptr<BvhNode>& node, const std::vector<RT
     //FW::printf("LEFT: \n");
     //for (int i = node->startPrim; i < node->startPrim + partitionIndex; ++i) {
     //    printf("%d: index %d ", i, indices_[i]);
-    //    FW::printVec3f(triangles[indices_[i]].centroid());
+    //    FW::printVec3f(triangles[indices_[i] ].centroid());
     //}
     //FW::printf("RIGHT: \n");
     //for (int i = node->startPrim + partitionIndex; i < node->endPrim; ++i) {

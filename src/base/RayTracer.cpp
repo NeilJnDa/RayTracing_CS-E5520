@@ -81,9 +81,6 @@ void RayTracer::constructHierarchy(std::vector<RTTriangle>& triangles, SplitMode
     // YOUR CODE HERE (R1):
     // This is where you should construct your BVH.
     m_triangles = &triangles;
-
-
-    printf("Construct BVH \n");
     m_bvh.construct(triangles, splitMode);
 }
 RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
@@ -96,22 +93,72 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     // function with the given ray and your root node. You can also use this
     // function to do one-off things per ray like finding the elementwise
     // reciprocal of the ray direction.
+    FW::F32 distance = dir.length();
+    Vec3f reci_dir = 1.0f / dir.normalized();
+    return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
 
+}
+RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
+    RaycastResult castresult;
+    ////Check each dimention if parallel
+    //for (int i = 0; i < 3; ++i) {
+    //    if((orig[i] == 0.0f && orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
+    //        return castresult;
+    //}
+
+
+    //Check Intersections with AABB
+    Vec3f t1 = (node.bb.min - orig) * reci_dir;
+    Vec3f t2 = (node.bb.max - orig) * reci_dir;
+    Vec3f tin = FW::min(t1, t2);
+    Vec3f tout = FW::max(t1, t2);
+    FW::F32 tstart = tin.max();
+    FW::F32 tend = tout.min();
+
+    if (m_rayCount.load() == 300000) {
+        printf("Current Node Contains: %d, %d \n ", node.startPrim, node.endPrim);
+        FW::printVec3f("node.bb.min: ", node.bb.min);
+        FW::printVec3f("node.bb.max: ", node.bb.max);
+        FW::printVec3f("orig: ", orig);
+        FW::printVec3f("dir: ", dir);
+        FW::printVec3f("dir normalize: ", dir.normalized());
+        FW::printVec3f("reci_dir: ", reci_dir);
+        FW::printVec3f("t1: ", t1);
+        FW::printVec3f("t2: ", t2);
+        FW::printVec3f("tin: ", tin);
+        FW::printVec3f("tout: ", tout);
+        printf("tstart: %f \n", tstart);
+        printf("tend: %f \n", tend);
+        printf(" \n");
+    }
+
+    if (tstart > tend || tend < 0) {
+        return castresult;
+    }
+
+    if (node.hasChildren()) {
+        //Go deeper
+        auto resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+        if (resultL.tri != nullptr) return resultL;
+        auto resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
+        if (resultR.tri != nullptr) return resultR;
+    }
+
+    // Else do leaf triangles traversal
+    
     // You can use this existing code for leaf nodes of the BVH (you do want to
     // change the range of the loop to match the elements the leaf covers.)
     float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
     int closest_i = -1;
 
-    RaycastResult castresult;
-
     // Naive loop over all triangles; this will give you the correct results,
     // but is terribly slow when ran for all triangles for each ray. Try it.
-    for ( int i = 0; i < (int)m_triangles->size(); ++i )
+    for (int i = node.startPrim ; i < node.endPrim; ++i)
     {
         float t, u, v;
-        if ( (*m_triangles)[i].intersect_woop( orig, dir, t, u, v ) )
+        if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
         {
-            if ( t > 0.0f && t < closest_t)
+            if (t > 0.0f && t < closest_t)
             {
                 closest_i = i;
                 closest_t = t;
@@ -122,8 +169,12 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     }
 
     if (closest_i != -1)
-        castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t *dir, orig, dir);
-    
+        castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+
+    if (m_rayCount.load() == 300000) {
+        FW::printVec3f("castResult: closest_t ", closest_t);
+    }
+
     return castresult;
 }
 

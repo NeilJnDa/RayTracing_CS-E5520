@@ -50,7 +50,7 @@ namespace FW {
 		node->right = nullptr;
 
 		//  If less than certain number of Prims, this is a leaf node.
-		if (node->endPrim - node->startPrim < 20) {
+		if (node->endPrim - node->startPrim < 50) {
 
 			//printf("____________Leaf: depth: %d \n", depth);
 			//printf("node start: %d \n", node->startPrim);
@@ -98,26 +98,84 @@ namespace FW {
 
 #pragma endregion
 #pragma region Object Median Partition
+		//FW::Vec3f diagonal = node->bb.max - node->bb.min;
+		//partitionIndex = node->startPrim + (node->endPrim - node->startPrim) / 2;
+		//if (diagonal.x >= diagonal.y && diagonal.x >= diagonal.z) {
+		//	//  Sort by X
+		//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
+		//		[&triangles](int a, int b) {return triangles[a].centroid().x < triangles[b].centroid().x; }
+		//	);
+		//}
+		//else if (diagonal.y >= diagonal.z && diagonal.y >= diagonal.x) {
+		//	//  Sort by Y
+		//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
+		//		[&triangles](int a, int b) {return triangles[a].centroid().y < triangles[b].centroid().y; }
+		//	);
+		//}
+		//else {
+		//	//  Sort by Z
+		//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
+		//		[&triangles](int a, int b) {return triangles[a].centroid().z < triangles[b].centroid().z; }
+		//	);
+		//}
+#pragma endregion
+#pragma region SAH Surface Area Heuristic Partition
 		FW::Vec3f diagonal = node->bb.max - node->bb.min;
-		partitionIndex = node->startPrim + (node->endPrim - node->startPrim) / 2;
-		if (diagonal.x >= diagonal.y && diagonal.x >= diagonal.z) {
-			//  Sort by X
-			std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-				[&triangles](int a, int b) {return true; }
-			);
+		const float interval = 0.02f;
+		float minSAH = std::numeric_limits<float>::max();
+		int minSAHAxis = 0;
+		float minPlane = 0;
+
+		//Check Partition for each axis
+		for (int axis = 0; axis < 3; ++axis) {
+
+			float plane = node->bb.min[axis] + interval;
+			//For each axis, do several times of checking with uniformly distributed interval.
+			while (plane < node->bb.max[axis]) {
+				
+				//Count how many triangles will go to left child
+				//for (int i = node->startPrim; i < node->endPrim; ++i) {
+				//	if (triangles[indices_[i]].centroid()[axis] < plane) {
+				//		//Will go to left
+				//		leftTri++;
+				//	}
+				//}
+				float leftTri = std::count_if(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim, 
+					[&](int a) {return triangles[a].centroid()[axis] < plane; });
+				Vec3f leftBBMax = node->bb.max;
+				leftBBMax[axis] -= diagonal[axis] - plane;
+				AABB leftBB(node->bb.min, leftBBMax);
+
+				Vec3f rightBBmin = node->bb.min;
+				rightBBmin[axis] += plane;
+				AABB rightBB(rightBBmin, node->bb.max);
+
+				//Calculate: SAH = AL * NL + AR * NR.  This holds when if we stop splitting ealier when number of trianglers is smaller than a value
+				float SAH = leftTri * leftBB.area() + (node->endPrim - node->startPrim - leftTri) * rightBB.area();
+
+				//Update Min SAH
+				if (SAH < minSAH) {
+					//printf("Current SAH: %f		", minSAH);
+					//printf("New SAH: %f \n", SAH);
+
+					minSAH = SAH;
+					minSAHAxis = axis;
+					minPlane = plane;
+				}
+				plane += interval;
+			}
 		}
-		else if (diagonal.y >= diagonal.z && diagonal.y >= diagonal.x) {
-			//  Sort by X
-			std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-				[&triangles](int a, int b) {return triangles[a].centroid().y < triangles[b].centroid().y; }
-			);
+		float SAH_NoSplitting = (node->endPrim - node->startPrim) * node->bb.area();
+		if (SAH_NoSplitting < minSAH) {
+			//No need to Split, this is a leaf Node
+			printf("No need to Split: %f		", minSAH);
+			printf("SAH_NoSplitting: %f \n", SAH_NoSplitting);
+			return;
 		}
-		else {
-			//  Sort by X
-			std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-				[&triangles](int a, int b) {return triangles[a].centroid().z < triangles[b].centroid().z; }
-			);
-		}
+		auto it = std::partition(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim,
+			[&triangles, &minSAHAxis, &minPlane](int a) {return triangles[a].centroid()[minSAHAxis] < minPlane; });
+		partitionIndex = std::distance(indices_.begin(), it);
+		//
 #pragma endregion
 
 

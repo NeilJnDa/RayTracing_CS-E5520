@@ -26,7 +26,13 @@ Vec2f getTexelCoords(Vec2f uv, const Vec2i size)
 	// UV coordinates range from negative to positive infinity. First map them
 	// to a range between 0 and 1 in order to support tiling textures, then
 	// scale the coordinates by image resolution and find the nearest pixel.
-	return Vec2f();
+    
+    Vec2f res;
+    res.x = std::abs((uv.x - std::floor(uv.x))) * size.x;
+    res.y = std::abs((uv.y - std::floor(uv.y))) * size.y;
+
+
+	return res;
 }
 
 Mat3f formBasis(const Vec3f& n) {
@@ -94,11 +100,9 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     // function to do one-off things per ray like finding the elementwise
     // reciprocal of the ray direction.
 
-    FW::F32 distance = dir.length();
+    //FW::F32 distance = dir.length();
     Vec3f reci_dir = 1.0f / dir.normalized();
     return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
-
-
 }
 RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
     RaycastResult castresult;
@@ -126,18 +130,18 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
         if (closest_i != -1)
             castresult = RaycastResult(&(*m_triangles)[m_bvh.getIndex(closest_i)], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
 
-        if (m_rayCount.load() == 300000) {
-            FW::printVec3f("castResult: closest_t ", closest_t);
-        }
+        //if (m_rayCount.load() == 300000) {
+        //    FW::printVec3f("castResult: closest_t ", closest_t);
+        //}
         return castresult;
     }
     
     
-    ////Check each dimention if parallel
-    //for (int i = 0; i < 3; ++i) {
-    //    if((orig[i] == 0.0f && orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
-    //        return castresult;
-    //}
+    //Check each dimention if parallel
+    for (int i = 0; i < 3; ++i) {
+        if(dir[i] == 0.0f && (orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
+            return castresult;
+    }
 
 
     //Check Intersections with AABB
@@ -148,22 +152,22 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
     FW::F32 tstart = tin.max();
     FW::F32 tend = tout.min();
 
-    if (m_rayCount.load() == 300000) {
-        printf("Current Node Contains: %d, %d \n ", node.startPrim, node.endPrim);
-        FW::printVec3f("node.bb.min: ", node.bb.min);
-        FW::printVec3f("node.bb.max: ", node.bb.max);
-        FW::printVec3f("orig: ", orig);
-        FW::printVec3f("dir: ", dir);
-        FW::printVec3f("dir normalize: ", dir.normalized());
-        FW::printVec3f("reci_dir: ", reci_dir);
-        FW::printVec3f("t1: ", t1);
-        FW::printVec3f("t2: ", t2);
-        FW::printVec3f("tin: ", tin);
-        FW::printVec3f("tout: ", tout);
-        printf("tstart: %f \n", tstart);
-        printf("tend: %f \n", tend);
-        printf(" \n");
-    }
+    //if (m_rayCount.load() == 300000) {
+    //    printf("Current Node Contains: %d, %d \n ", node.startPrim, node.endPrim);
+    //    FW::printVec3f("node.bb.min: ", node.bb.min);
+    //    FW::printVec3f("node.bb.max: ", node.bb.max);
+    //    FW::printVec3f("orig: ", orig);
+    //    FW::printVec3f("dir: ", dir);
+    //    FW::printVec3f("dir normalize: ", dir.normalized());
+    //    FW::printVec3f("reci_dir: ", reci_dir);
+    //    FW::printVec3f("t1: ", t1);
+    //    FW::printVec3f("t2: ", t2);
+    //    FW::printVec3f("tin: ", tin);
+    //    FW::printVec3f("tout: ", tout);
+    //    printf("tstart: %f \n", tstart);
+    //    printf("tend: %f \n", tend);
+    //    printf(" \n");
+    //}
 
     if (tstart > tend || tend < 0) {
         //No Intersections

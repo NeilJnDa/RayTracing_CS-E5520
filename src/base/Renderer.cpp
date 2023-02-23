@@ -208,7 +208,31 @@ Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResul
 	}
 	Vec3f rayOrig = hit.point + (cameraCtrl.getPosition() - hit.point).normalized() * 0.001f;
 	std::vector<FW::Vec3f> rayDir(m_aoNumRays);
-	std::generate(rayDir.begin(), rayDir.end(), [&rnd]() {return rnd.getVec3f(-1.0f,1.0f).normalized(); });
+
+#pragma region Sampling
+	//Non-uniform 
+	//std::generate(rayDir.begin(), rayDir.end(), [&rnd]() {return rnd.getVec3f(-1.0f,1.0f).normalized(); });
+
+	//Uniform: rejection sampling
+	std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
+		Vec3f sampleDir;
+		//Get a sample in the hemisphere
+		do {
+			//Get a sample direction inside a unit sphere
+			do {
+				sampleDir = rnd.getVec3f(-1.0f, 1.0f);
+			} while (sampleDir.length() > 1);
+		} while (FW::dot(sampleDir, n) < 0);
+		return sampleDir;
+		});
+
+	//	Non-uniform: Sampling from a sphere(end of n is the origin, n is radius)
+	// https://github.com/RayTracing/raytracing.github.io
+	//std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
+	//	return (n + rnd.getVec3f(-1.0f, 1.0f).normalized()).normalized();
+	//	});
+#pragma endregion
+
 	Mat3f M = FW::formBasis(n);
 	int noHit = 0;
 	for (int i = 0; i < m_aoNumRays; ++i) {

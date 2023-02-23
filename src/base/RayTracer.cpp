@@ -100,14 +100,14 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     // function to do one-off things per ray like finding the elementwise
     // reciprocal of the ray direction.
 
-    //FW::F32 distance = dir.length();
-    Vec3f reci_dir = 1.0f / dir.normalized();
-    return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
+    Vec3f reci_dir_unit = 1.0f / dir.normalized();
+    return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
 }
-RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
+RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir_unit, const BvhNode& node) const {
     RaycastResult castresult;
     if (!node.left && !node.right) {
         //Do traversal in a leaf node
+        //t range [0,1]
         float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
         int closest_i = -1;
 
@@ -129,9 +129,13 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
         }
         if (closest_i != -1)
             castresult = RaycastResult(&(*m_triangles)[m_bvh.getIndex(closest_i)], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+        //
+        //if (m_rayCount.load() == 30000) {
+        //    FW::printVec3f("orig ", orig);
+        //    FW::printVec3f(" dir ", dir);
+        //    FW::printf(" dir length %f \n", dir.length());
+        //    FW::printf("castResult: closest_t %f \n ", closest_t);
 
-        //if (m_rayCount.load() == 300000) {
-        //    FW::printVec3f("castResult: closest_t ", closest_t);
         //}
         return castresult;
     }
@@ -145,8 +149,8 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
 
 
     //Check Intersections with AABB
-    Vec3f t1 = (node.bb.min - orig) * reci_dir;
-    Vec3f t2 = (node.bb.max - orig) * reci_dir;
+    Vec3f t1 = (node.bb.min - orig) * reci_dir_unit;
+    Vec3f t2 = (node.bb.max - orig) * reci_dir_unit;
     Vec3f tin = FW::min(t1, t2);
     Vec3f tout = FW::max(t1, t2);
     FW::F32 tstart = tin.max();
@@ -177,9 +181,9 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
     //Go deeper
     RaycastResult resultL, resultR;
     if(node.left)
-        resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+        resultL = raycastBvhIterator(orig, dir, reci_dir_unit, *node.left);
     if(node.right)
-        resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
+        resultR = raycastBvhIterator(orig, dir, reci_dir_unit, *node.right);
 
     return resultL.t < resultR.t ? resultL: resultR;
      

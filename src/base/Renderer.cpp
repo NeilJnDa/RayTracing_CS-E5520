@@ -3,7 +3,7 @@
 
 #include <atomic>
 #include <chrono>
-
+#include <algorithm>
 
 namespace FW {
 
@@ -198,11 +198,25 @@ Vec4f Renderer::computeShadingHeadlight(const RaycastResult& hit, const CameraCo
 
 Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResult& hit, const CameraControls& cameraCtrl, Random& rnd)
 {
-    Vec4f color;
+	// YOUR CODE HERE (R4)
 
-    // YOUR CODE HERE (R4)
-
-    return color;
+	Vec4f color = Vec4f(hit.tri->m_material->diffuse.getXYZ(), 1.0f);
+	Vec3f n(hit.tri->normal());
+	if (dot(n, (cameraCtrl.getPosition() - hit.point)) < 0) 
+	{
+		n = -n;
+	}
+	Vec3f rayOrig = hit.point + (cameraCtrl.getPosition() - hit.point).normalized() * 0.001f;
+	std::vector<FW::Vec3f> rayDir(m_aoNumRays);
+	std::generate(rayDir.begin(), rayDir.end(), [&rnd]() {return rnd.getVec3f(-1.0f,1.0f).normalized(); });
+	Mat3f M = FW::formBasis(n);
+	int noHit = 0;
+	for (int i = 0; i < m_aoNumRays; ++i) {
+		auto res = rt->raycast(rayOrig, M * rayDir[i] * m_aoRayLength);
+		if (res.tri == nullptr)
+			noHit++;
+	}
+    return color * noHit / m_aoNumRays;
 }
 
 Vec4f Renderer::computeShadingWhitted(RayTracer* rt, const RaycastResult& hit, const CameraControls& cameraCtrl, Random& rnd, int num_bounces)

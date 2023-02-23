@@ -83,8 +83,8 @@ namespace FW {
 
 		bool RTTriangle::intersect_woop(const Vec3f& orig, const Vec3f& dir, float& t, float& u, float& v) const {
 
-			Vec3f transformed_orig = m_data.M*orig + m_data.N,
-				transformed_dir = m_data.M*dir;
+			Vec3f transformed_orig = m_data.M * orig + m_data.N,
+				transformed_dir = m_data.M * dir;
 
 			t = -transformed_orig.z / transformed_dir.z;
 			u = transformed_orig.x + transformed_dir.x * t;

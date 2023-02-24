@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "rtIntersect.inl"
 #include <fstream>
-
+#include <algorithm>
 #include "rtlib.hpp"
 
 
@@ -40,10 +40,11 @@ namespace FW
 
 		//q is not parallel to n
 		Vec3f q = n;
-		Vec3f qabs(abs(q[0]), abs(q[1]), abs(q[2]));
-		if (qabs[0] < qabs[1] && qabs[0] < qabs[2]) q[0] = 1;
-		else if (qabs[1] < qabs[0] && qabs[1] < qabs[2]) q[1] = 1;
-		else  q[2] = 1;
+		std::vector<float> qabs = { abs(q[0]), abs(q[1]), abs(q[2]) };
+
+		auto it = std::min_element(qabs.begin(), qabs.end());
+		int index = std::distance(qabs.begin(), it);
+		q[index] = 1.0f;
 
 		Vec3f t = cross(q, n).normalized();
 		Vec3f b = cross(n, t).normalized();

@@ -200,9 +200,9 @@ namespace FW {
 	{
 		// YOUR CODE HERE (R4)
 
-		Vec4f color(1.0f, 1.0f, 1.0f, 1.0f);
+		Vec4f color(1.0f);
 		Vec3f n(hit.tri->normal());
-		if (dot(n, (cameraCtrl.getPosition() - hit.point)) < 0)
+		if (dot(n, (cameraCtrl.getPosition() - hit.point)) <= 0)
 		{
 			n = -n;
 		}
@@ -214,26 +214,26 @@ namespace FW {
 		//std::generate(rayDir.begin(), rayDir.end(), [&rnd]() {return rnd.getVec3f(-1.0f,1.0f).normalized(); });
 
 		//Uniform: rejection sampling
-		std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
-			Vec2f sampleDir;
-			//Get a sample direction inside a unit sphere
-			do {
-				sampleDir = rnd.getVec2f(-1.0f, 1.0f);
-			} while (sampleDir.length() > 1);
-			return Vec3f(sampleDir.x, sampleDir.y, sqrt(1 - sampleDir.lenSqr()));
-			});
+		//std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
+		//	Vec2f sampleDir;
+		//	//Get a sample direction inside a unit sphere
+		//	do {
+		//		sampleDir = rnd.getVec2f(-1.0f, 1.0f);
+		//	} while (sampleDir.length() > 1);
+		//	return Vec3f(sampleDir.x, sampleDir.y, sqrt(1 - sampleDir.lenSqr()));
+		//	});
 
 		//	Non-uniform: Sampling from a sphere(end of n is the origin, n is radius)
-		// https://github.com/RayTracing/raytracing.github.io
-		//std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
-		//	return (n + rnd.getVec3f(-1.0f, 1.0f).normalized()).normalized();
-		//	});
+		 //https://github.com/RayTracing/raytracing.github.io
+		std::generate(rayDir.begin(), rayDir.end(), [&rnd, &n]() {
+			return (n + rnd.getVec3f(-1.0f, 1.0f).normalized()).normalized();
+			});
 #pragma endregion
 
 		Mat3f M = FW::formBasis(n);
 		int noHit = 0;
 		for (int i = 0; i < m_aoNumRays; ++i) {
-			auto res = rt->raycast(rayOrig, M * rayDir[i] * m_aoRayLength);
+			auto res = rt->raycast(rayOrig,  rayDir[i] * m_aoRayLength);
 			if (res.tri == nullptr)
 				noHit++;
 		}

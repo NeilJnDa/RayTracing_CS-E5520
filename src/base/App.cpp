@@ -100,6 +100,15 @@ App::App(std::vector<std::string>& cmd_args)
 	m_commonCtrl.addToggle(&(m_settings.use_arealights), FW_KEY_NONE, "Use area lights");
 	m_commonCtrl.addToggle(&(m_settings.enable_reflections), FW_KEY_NONE, "Enable reflections");
 	m_commonCtrl.addToggle(&(m_toneMap), FW_KEY_NONE, "Enable tone mapping");
+
+
+	//NEW Toggle
+	m_commonCtrl.addSeparator();
+	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_ObjectMedian, FW_KEY_NONE, "SplitMode: Object Median");
+	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_SpatialMedian, FW_KEY_NONE, "SplitMode: Spatial Median");
+	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_Sah, FW_KEY_NONE, "SplitMode: SAH");
+	//END
+
 	m_commonCtrl.addSeparator();
 
 	m_commonCtrl.addButton((S32*)&m_action, Action_TracePrimaryRays,        FW_KEY_ENTER,   "Trace Rays (ENTER)");
@@ -500,7 +509,18 @@ bool App::handleEvent(const Window::Event& ev)
 			m_renderer->setNormalMapping(m_normalMapped);
 			m_renderer->setTextureFiltering(m_filterTextures);
 			
+			//New: Time Result of ray trace
+			LARGE_INTEGER start, stop, frequency;
+			QueryPerformanceFrequency(&frequency);
+			QueryPerformanceCounter(&start); // Start time stamp		
+
 			m_renderer->rayTracePicture(m_rt.get(), m_rtImage.get(), m_cameraCtrl, (Renderer::ShadingMode)m_shadingMode);
+
+			QueryPerformanceCounter(&stop); // Stop time stamp
+
+			int ray_trace_time = (int)((stop.QuadPart - start.QuadPart) * 1000.0 / frequency.QuadPart); // Get timer result in milliseconds
+			std::cout << "Ray trace time: " << ray_trace_time << " ms" << std::endl;
+
 			m_RTTextureNeedsUpload = true;
 
 			m_showRTImage = true;

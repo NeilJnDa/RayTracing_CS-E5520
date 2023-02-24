@@ -40,12 +40,13 @@ namespace FW
 
 		//q is not parallel to n
 		Vec3f q = n;
-		if (q[0] < q[1] && q[0] < q[2]) q[0] = 1;
-		else if (q[1] < q[0] && q[1] < q[2]) q[1] = 1;
+		Vec3f qabs(abs(q[0]), abs(q[1]), abs(q[2]));
+		if (qabs[0] < qabs[1] && qabs[0] < qabs[2]) q[0] = 1;
+		else if (qabs[1] < qabs[0] && qabs[1] < qabs[2]) q[1] = 1;
 		else  q[2] = 1;
 
 		Vec3f t = cross(q, n).normalized();
-		Vec3f b = cross(t, n).normalized();
+		Vec3f b = cross(n, t).normalized();
 
 		Mat3f res;
 		res.setCol(0, t);

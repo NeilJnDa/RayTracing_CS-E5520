@@ -200,7 +200,7 @@ Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResul
 {
 	// YOUR CODE HERE (R4)
 
-	Vec4f color = Vec4f(hit.tri->m_material->diffuse.getXYZ(), 1.0f);
+	Vec4f color(1.f);
 	Vec3f n(hit.tri->normal());
 	if (dot(n, (cameraCtrl.getPosition() - hit.point)) < 0) 
 	{

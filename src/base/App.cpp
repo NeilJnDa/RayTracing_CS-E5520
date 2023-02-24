@@ -104,8 +104,8 @@ App::App(std::vector<std::string>& cmd_args)
 
 	//NEW Toggle
 	m_commonCtrl.addSeparator();
-	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_ObjectMedian, FW_KEY_NONE, "SplitMode: Object Median");
 	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_SpatialMedian, FW_KEY_NONE, "SplitMode: Spatial Median");
+	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_ObjectMedian, FW_KEY_NONE, "SplitMode: Object Median");
 	m_commonCtrl.addToggle((S32*)&m_settings.splitMode, SplitMode::SplitMode_Sah, FW_KEY_NONE, "SplitMode: SAH");
 	//END
 

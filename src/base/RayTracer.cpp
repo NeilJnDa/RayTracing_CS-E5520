@@ -100,6 +100,7 @@ namespace FW
 	void RayTracer::constructHierarchy(std::vector<RTTriangle>& triangles, SplitMode splitMode) {
 		// YOUR CODE HERE (R1):
 		// This is where you should construct your BVH.
+		printf("Split Mode: %d \n", (int)splitMode);
 		m_triangles = &triangles;
 		m_bvh.construct(triangles, splitMode);
 	}

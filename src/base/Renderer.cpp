@@ -200,7 +200,7 @@ Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResul
 {
 	// YOUR CODE HERE (R4)
 
-	Vec4f color(1.f);
+	Vec4f color(1.0f, 1.0f, 1.0f, 1.0f);
 	Vec3f n(hit.tri->normal());
 	if (dot(n, (cameraCtrl.getPosition() - hit.point)) < 0) 
 	{
@@ -223,7 +223,7 @@ Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResul
 				sampleDir = rnd.getVec3f(-1.0f, 1.0f);
 			} while (sampleDir.length() > 1);
 		} while (FW::dot(sampleDir, n) < 0);
-		return sampleDir;
+		return sampleDir.normalized();
 		});
 
 	//	Non-uniform: Sampling from a sphere(end of n is the origin, n is radius)
@@ -236,7 +236,7 @@ Vec4f Renderer::computeShadingAmbientOcclusion(RayTracer* rt, const RaycastResul
 	Mat3f M = FW::formBasis(n);
 	int noHit = 0;
 	for (int i = 0; i < m_aoNumRays; ++i) {
-		auto res = rt->raycast(rayOrig, M * rayDir[i] * m_aoRayLength);
+		auto res = rt->raycast(rayOrig, rayDir[i] * m_aoRayLength);
 		if (res.tri == nullptr)
 			noHit++;
 	}

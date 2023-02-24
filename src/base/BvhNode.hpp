@@ -42,6 +42,8 @@ struct BvhNode : noncopyable {
     }
 
     void save(Saver& os);
+
+
 };
 
 }

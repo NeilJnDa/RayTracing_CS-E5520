@@ -46,6 +46,7 @@ namespace FW {
 		printf("Prims : %d \n", node->endPrim - node->startPrim);
 		FW::printVec3f("BB min", node->bb.min);
 		FW::printVec3f("BB max", node->bb.max);
+
 		printf("node start: %d \n", node->startPrim);
 		printf("node end: %d \n", node->endPrim);
 		Vec3f averageCenter;
@@ -64,6 +65,7 @@ namespace FW {
 		node->bb.min = Vec3f(FLOAT_MAX, FLOAT_MAX, FLOAT_MAX);
 		node->bb.max = Vec3f(FLOAT_MIN, FLOAT_MIN, FLOAT_MIN);
 
+		
 		//Find partition according to BB of triangles centroids. This could prevent from a too large triangle making it hard to partition
 		//tcBB: Triangles Centroids Bounding Box
 		AABB tcBB(Vec3f(FLOAT_MAX, FLOAT_MAX, FLOAT_MAX), Vec3f(FLOAT_MIN, FLOAT_MIN, FLOAT_MIN));
@@ -75,8 +77,8 @@ namespace FW {
 			tcBB.min = FW::min(tcBB.min, triangles[indices_[i]].centroid());
 		}
 
-
-
+		//NOTE: if all triangles are on a surface, one axis can be close to 0. 
+		//Thus when check intersections, the check should be <= rather than <
 		node->left = nullptr;
 		node->right = nullptr;
 
@@ -155,8 +157,9 @@ namespace FW {
 			for (int axis = 0; axis < 3; ++axis) {
 				float interval = diagonal_tc[axis] / BUCKETS;
 
-				if (diagonal_tc[axis] < 1e-5) {
+				if (diagonal_tc[axis] < 1e-3) {
 					//To small scale, do not split
+					//printf("Too small Splitting! axis: %f, diagonal_tc[axis]: %f \n", axis, diagonal_tc[axis]);
 					continue;
 				}
 
@@ -166,7 +169,7 @@ namespace FW {
 				std::vector<int> triangles_count(BUCKETS + 2, 0);
 				std::for_each(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim, 
 					[&](int a) {
-						float bucket = (triangles[a].centroid()[axis] - tcBB.min[axis]) / interval;
+						int bucket = (triangles[a].centroid()[axis] - tcBB.min[axis]) / interval;
 						triangles_count[bucket + 1]++;
 					});
 				float plane = tcBB.min[axis];
@@ -204,6 +207,7 @@ namespace FW {
 		//
 #pragma endregion
 		if (partitionIndex == node->startPrim || partitionIndex == node->endPrim) {
+			//printNodeInfo(node, triangles, splitMode, indices_, depth);
 			return;
 		}
 		node->left = std::make_unique<BvhNode>(node->startPrim, partitionIndex);

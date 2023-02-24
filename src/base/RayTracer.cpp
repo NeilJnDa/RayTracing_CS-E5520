@@ -8,7 +8,8 @@
 #include <fstream>
 #include <algorithm>
 #include "rtlib.hpp"
-
+#define FLOAT_MAX 3.40282e+38
+#define FLOAT_MIN -3.40282e+38
 
 // Helper function for hashing scene data for caching BVHs
 extern "C" void MD5Buffer(void* buffer, size_t bufLen, unsigned int* pDigest);
@@ -117,15 +118,24 @@ namespace FW
 		// function to do one-off things per ray like finding the elementwise
 		// reciprocal of the ray direction.
 
-		Vec3f reci_dir_unit = 1.0f / dir.normalized();
+		Vec3f reci_dir_unit = 1.0f / dir;
 		return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
 	}
-	bool CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir_unit, const BvhNode& node, float& t_hit) {
+	bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const{
 		//Check Intersections with AABB
-		Vec3f t1 = (node.bb.min - orig) * reci_dir_unit;
-		Vec3f t2 = (node.bb.max - orig) * reci_dir_unit;
-		FW::F32 tstart = FW::min(t1, t2).max(); //tin = FW::min(t1, t2);
-		FW::F32 tend = FW::max(t1, t2).min(); //tout = FW::max(t1, t2);
+		//t1: ray inject hit.  t2: ray leave hit.
+		//Compute t1,t2 for each dimention, and make sure t1[i] < t2[i];
+		//Ray can inject from every direciton, thus we can not ensure t1 is computed from bb.min
+		Vec3f t1, t2;
+		for (int i = 0; i < 3; ++i) {
+			t1[i] = (node.bb.min[i] - orig[i]) * reci_dir[i];
+			t2[i] = (node.bb.max[i] - orig[i]) * reci_dir[i];
+			if (t1[i] > t2[i])
+				std::swap(t1[i], t2[i]);
+		}
+		
+		FW::F32 tstart = t1.max(); 
+		FW::F32 tend = t2.min(); 
 
 		//if (m_rayCount.load() == 300000) {
 		//    printf("Current Node Contains: %d, %d \n ", node.startPrim, node.endPrim);
@@ -137,25 +147,31 @@ namespace FW
 		//    FW::printVec3f("reci_dir: ", reci_dir);
 		//    FW::printVec3f("t1: ", t1);
 		//    FW::printVec3f("t2: ", t2);
-		//    FW::printVec3f("tin: ", tin);
-		//    FW::printVec3f("tout: ", tout);
+		//    FW::printVec3f("tin: ", FW::min(t1, t2));
+		//    FW::printVec3f("tout: ", FW::max(t1, t2));
 		//    printf("tstart: %f \n", tstart);
 		//    printf("tend: %f \n", tend);
 		//    printf(" \n");
 		//}
-		if (tstart < tend && tstart > 0) {
-			t_hit = tstart;
-			return true;
-		}
-		else if (tstart < tend && tstart < 0) {
-			t_hit = tend;
-			return true;
-		}
-		else return false;
+
+		//t_hit should be (0,1)
+		//NOTE: if all triangles are on a surface, one axis can be close to 0. 
+		//Thus when check intersections, the check should be <= rather than <
+		if (tstart <= tend) {
+			if (tstart >= 0 && tstart <= 1) {
+				t_hit = tstart;
+				return true;
+			}
+			else if (tstart <= 0 && tend <= 1) {
+				t_hit = tend;
+				return true;
+			}
+		}	
+		return false;
 	}
-	RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir_unit, const BvhNode& node) const {
+	RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
 		RaycastResult castresult;
-		if (!node.left && !node.right) {
+		if (!node.hasChildren()) {
 			//Do traversal in a leaf node
 			//t range [0,1]
 			float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
@@ -190,61 +206,60 @@ namespace FW
 				return castresult;
 		}
 
-		float t_hit = 0.0f;
-		if (!CheckIntersection(orig, dir, reci_dir_unit, node, t_hit)) {
+		float t_hit = FLOAT_MIN;
+		if (!CheckIntersection(orig, dir, reci_dir, node, t_hit)) {
 			//No Intersection with this node's BB 
 			return castresult;
 		}
 
 		//Has intersections, Go deeper
-		float t_left_hit = 0.0f, t_right_hit = 0.0f;
+		float t_left_hit = FLOAT_MAX, t_right_hit = FLOAT_MAX;
 		bool hitLeft = false, hitRight = false;
-		if (node.left)
-			hitLeft = CheckIntersection(orig, dir, reci_dir_unit, *node.left, t_left_hit);
-		if (node.right)
-			hitRight = CheckIntersection(orig, dir, reci_dir_unit, *node.right, t_right_hit);
+		hitLeft = CheckIntersection(orig, dir, reci_dir, *node.left, t_left_hit);
+		hitRight = CheckIntersection(orig, dir, reci_dir, *node.right, t_right_hit);
 		if (hitLeft && !hitRight)
 			//Only Hit Left
-			return raycastBvhIterator(orig, dir, reci_dir_unit, *node.left);
+			return raycastBvhIterator(orig, dir, reci_dir, *node.left);
 		if (!hitLeft && hitRight)
 			//Only Hit Right
-			return raycastBvhIterator(orig, dir, reci_dir_unit, *node.right);
+			return raycastBvhIterator(orig, dir, reci_dir, *node.right);
+
 
 		//If both hit, compare the closest t
 		RaycastResult resultL, resultR;
-
 #pragma region Tried to escape early, but slower and render error
-
-		////Hit Left first, then right
+		//Hit Left first, then right
 		//if (t_left_hit < t_right_hit) {
 		//	//Find the actual hit point in the left
-		//	resultL = raycastBvhIterator(orig, dir, reci_dir_unit, *node.left);
+		//	resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
 		//	//If the actual hit is closer than the hit of right, just return the resultL
 		//	if (resultL.t < t_right_hit)
 		//	{
-		//		//printf("Only Left \n");
-		//		//FW::printVec3f("orig", orig);
-		//		//FW::printVec3f("dir", dir);
-		//		//FW::printVec3f("dir.normalized()", dir.normalized());
+		//		resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
+		//		if (resultR.t < t_right_hit) {
+		//			printf("Only Left But Wrong\n");
+		//			FW::printVec3f("Left BB max", node.left->bb.max);
+		//			FW::printVec3f("Left BB min", node.left->bb.min);
+		//			FW::printVec3f("Right BB max", node.right->bb.max);
+		//			FW::printVec3f("Right BB min", node.right->bb.min);
+		//			FW::printVec3f("Left Hit Check", orig + dir.normalized() * t_left_hit);
+		//			FW::printVec3f("Right Hit Check", orig + dir.normalized() * t_right_hit);
+		//			printf("t_left_hit %f \n", t_left_hit);
+		//			printf("t_right_hit %f \n", t_right_hit);
 
-		//		//FW::printVec3f("Right BB max", node.right->bb.max);
-		//		//FW::printVec3f("Right BB min", node.right->bb.min);
-		//		//FW::printVec3f("Left Hit", orig + dir.normalized() * t_left_hit);
-		//		//FW::printVec3f("Right Hit", orig + dir.normalized() * t_right_hit);
-		//		//printf("t_left_hit %f \n", t_left_hit);
-		//		//printf("resultL.t %f \n", resultL.t);
-		//		//FW::printVec3f("Left result Hit", orig + dir.normalized() * resultL.t);
-
-		//		//printf("t_right_hit %f \n", t_right_hit);
-		//		//printf("\n");
+		//			printf("resultL.t %f \n", resultL.t);
+		//			printf("resultR.t %f \n", resultR.t);
+		//			FW::printVec3f("Left result Hit", orig + dir.normalized() * resultL.t);
+		//			FW::printVec3f("Right result Hit", orig + dir.normalized() * resultR.t);
+		//			printf("\n");
+		//		}
 		//		return resultL;
 		//	}
 		//}
-		//////Hit Right first, then left
-
+		////Hit Right first, then left
 		//if (t_right_hit < t_left_hit) {
 		//	//Find the actual hit point in the left
-		//	resultR = raycastBvhIterator(orig, dir, reci_dir_unit, *node.right);
+		//	resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
 		//	//If the actual hit is closer than the hit of right, just return the resultL
 		//	if (resultR.t < t_left_hit)
 		//	{
@@ -254,11 +269,10 @@ namespace FW
 		//Otherwise, find the exact hit of both and compare.
 #pragma endregion
 
-
 		if (!resultL.tri)
-			resultL = raycastBvhIterator(orig, dir, reci_dir_unit, *node.left);
+			resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
 		if (!resultR.tri)
-			resultR = raycastBvhIterator(orig, dir, reci_dir_unit, *node.right);
+			resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
 		return resultL.t < resultR.t ? resultL : resultR;
 
 	}

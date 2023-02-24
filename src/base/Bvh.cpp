@@ -153,23 +153,27 @@ namespace FW {
 
 			//Check Partition for each axis
 			for (int axis = 0; axis < 3; ++axis) {
-				//Absolute value of the splitting plane
-				float plane = tcBB.min[axis] + diagonal_tc[axis] / BUCKETS;
-				//FW::printVec3f("diagonal_tc: ", diagonal_tc);
-				//printf("plane: %f \n", plane);
-				//printf("diagonal_tc: %f \n", diagonal_tc[axis]);
-				//printf("interval: %f \n", diagonal_tc[axis] / BUCKETS);
-				//printf("min: %f \n", tcBB.min[axis]);
-				//printf("max: %f \n", tcBB.max[axis]);
-				//printf(" \n");
+				float interval = diagonal_tc[axis] / BUCKETS;
+
+				if (diagonal_tc[axis] < 1e-5) {
+					//To small scale, do not split
+					continue;
+				}
 
 				//For each axis, do several times of checking with uniformly distributed interval.
-				while (plane < tcBB.max[axis]) {
-					//printf("Enter");
-					//Count how many triangles will go to left child
-					//TODO: No need to count them again.
-					float leftTri = std::count_if(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim,
-						[&](int a) {return triangles[a].centroid()[axis] < plane; });
+				//Dynamic Programming: Store the number of triangles in the left node outside the loop
+				//Since the bucket starts from tcBB.min rather than node->bb.min. There are two more space before the first bucket and after the last.
+				std::vector<int> triangles_count(BUCKETS + 2, 0);
+				std::for_each(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim, 
+					[&](int a) {
+						float bucket = (triangles[a].centroid()[axis] - tcBB.min[axis]) / interval;
+						triangles_count[bucket + 1]++;
+					});
+				float plane = tcBB.min[axis];
+				float leftTri = 0;
+				for (int i = 0; i <= BUCKETS + 1; ++i) {
+
+					leftTri += triangles_count[i];
 					Vec3f leftBBMax = tcBB.max;
 					leftBBMax[axis] = plane;
 					AABB leftBB(tcBB.min, leftBBMax);
@@ -188,24 +192,9 @@ namespace FW {
 						minSAHAxis = axis;
 						minPlane = plane;
 					}
-					plane += diagonal_tc[axis] / BUCKETS;
+					plane += interval;
 				}
-			}
-			//printf("Prims : %d \n", node->endPrim - node->startPrim);
-			//FW::printVec3f("BB min", node->bb.min);
-			//FW::printVec3f("BB max", node->bb.max);
-			//printf("node start: %d \n", node->startPrim);
-			//printf("node end: %d \n", node->endPrim);
-			//printf("minSAH: %f \n", minSAH);
-			//printf("minPlane: %f \n", minPlane);
-			//printf("minSAHAxis: %d \n", minSAHAxis);
-			Vec3f averageCenter;
-			for (int i = node->startPrim; i < node->endPrim; ++i) {
-				//FW::printVec3f("Triangle V1", triangles[indices_[i]].m_vertices[0].p);
-				//FW::printVec3f("Triangle V2", triangles[indices_[i]].m_vertices[1].p);
-				//FW::printVec3f("Triangle V3", triangles[indices_[i]].m_vertices[2].p);
-				//if(node->endPrim - node->startPrim < 50) FW::printVec3f("Triangle Center", triangles[indices_[i]].centroid());
-				averageCenter += triangles[indices_[i]].centroid();
+
 			}
 
 			auto it = std::partition(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim,
@@ -215,33 +204,7 @@ namespace FW {
 		//
 #pragma endregion
 		if (partitionIndex == node->startPrim || partitionIndex == node->endPrim) {
-			printf("CASE");
 			return;
-			////If it can not split, just use Object Median
-			////printf("SAH failed, Use Object Median Once");
-			////TODO: TOO MANY THIS CASE
-			////printNodeInfo(node, triangles, splitMode, indices_, depth);
-
-			//FW::Vec3f diagonal = node->bb.max - node->bb.min;
-			//partitionIndex = node->startPrim + (node->endPrim - node->startPrim) / 2;
-			//if (diagonal.x >= diagonal.y && diagonal.x >= diagonal.z) {
-			//	//  Sort by X
-			//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-			//		[&triangles](int a, int b) {return triangles[a].centroid().x < triangles[b].centroid().x; }
-			//	);
-			//}
-			//else if (diagonal.y >= diagonal.z && diagonal.y >= diagonal.x) {
-			//	//  Sort by Y
-			//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-			//		[&triangles](int a, int b) {return triangles[a].centroid().y < triangles[b].centroid().y; }
-			//	);
-			//}
-			//else {
-			//	//  Sort by Z
-			//	std::nth_element(indices_.begin() + node->startPrim, indices_.begin() + partitionIndex, indices_.begin() + node->endPrim,
-			//		[&triangles](int a, int b) {return triangles[a].centroid().z < triangles[b].centroid().z; }
-			//	);
-			//}
 		}
 		node->left = std::make_unique<BvhNode>(node->startPrim, partitionIndex);
 		constructIterator(node->left, triangles, splitMode, indices_, depth);		

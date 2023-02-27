@@ -202,11 +202,11 @@ namespace FW {
 
 		Vec4f color(1.0f);
 		Vec3f n(hit.tri->normal());
-		if (dot(n, (cameraCtrl.getPosition() - hit.point)) <= 0)
+		if (dot(n, -hit.dir) <= 0)
 		{
 			n = -n;
 		}
-		Vec3f rayOrig = hit.point + (cameraCtrl.getPosition() - hit.point).normalized() * 0.001f;
+		Vec3f rayOrig = hit.point - hit.dir.normalized() * 0.001f;
 		std::vector<FW::Vec3f> rayDir(m_aoNumRays);
 
 #pragma region Sampling

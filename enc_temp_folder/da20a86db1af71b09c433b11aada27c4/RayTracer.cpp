@@ -124,28 +124,28 @@ namespace FW
 
 		// Naive loop over all triangles; this will give you the correct results,
 		// but is terribly slow when ran for all triangles for each ray. Try it.
-		//for (int i = 0; i < (int)m_triangles->size(); ++i)
-		//{
-		//	float t, u, v;
-		//	if ((*m_triangles)[i].intersect_woop(orig, dir, t, u, v))
-		//	{
-		//		if (t > 0.0f && t < closest_t)
-		//		{
-		//			closest_i = i;
-		//			closest_t = t;
-		//			closest_u = u;
-		//			closest_v = v;
-		//		}
-		//	}
-		//}
+		for (int i = 0; i < (int)m_triangles->size(); ++i)
+		{
+			float t, u, v;
+			if ((*m_triangles)[i].intersect_woop(orig, dir, t, u, v))
+			{
+				if (t > 0.0f && t < closest_t)
+				{
+					closest_i = i;
+					closest_t = t;
+					closest_u = u;
+					closest_v = v;
+				}
+			}
+		}
 
-		//if (closest_i != -1)
-		//	castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+		if (closest_i != -1)
+			castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
 
-		//return castresult;
+		return castresult;
 
-		Vec3f reci_dir_unit = 1.0f / dir;
-		return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
+		//Vec3f reci_dir_unit = 1.0f / dir;
+		//return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
 	}
 	bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const{
 		//Check Intersections with AABB

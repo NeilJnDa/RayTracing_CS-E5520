@@ -206,7 +206,7 @@ namespace FW {
 		{
 			n = -n;
 		}
-		Vec3f rayOrig = hit.point - hit.dir.normalized() * 0.001f;
+		Vec3f rayOrig = hit.point - hit.dir * 0.001f;
 		std::vector<FW::Vec3f> rayDir(m_aoNumRays);
 
 #pragma region Sampling
@@ -220,6 +220,7 @@ namespace FW {
 			return Vec3f(sampleDir.x, sampleDir.y, sqrt(1 - sampleDir.lenSqr()));
 			});
 		Mat3f M = FW::formBasis(n);
+
 		int noHit = 0;
 		for (int i = 0; i < m_aoNumRays; ++i) {
 			auto res = rt->raycast(rayOrig, M * rayDir[i] * m_aoRayLength);
@@ -239,7 +240,7 @@ namespace FW {
 		//		noHit++;
 		//}
 #pragma endregion
-		return color * noHit / m_aoNumRays;
+		return color * (float)noHit / (float)m_aoNumRays;
 	}
 
 	Vec4f Renderer::computeShadingWhitted(RayTracer* rt, const RaycastResult& hit, const CameraControls& cameraCtrl, Random& rnd, int num_bounces)

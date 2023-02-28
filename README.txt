@@ -3,30 +3,31 @@
 #
 # Assignment 1: Accelerated Ray Tracing
 
-Student name:
-Student number:
+Student name: Jinda Li
+Student number: 1034907
 
 # Which parts of the assignment did you complete? Mark them 'done'.
 # You can also mark non-completed parts as 'attempted' if you spent a fair amount of
 # effort on them. If you do, explain the work you did in the problems/bugs section
 # and leave your 'attempt' code in place (commented out if necessary) so we can see it.
 
-R1 BVH construction and traversal (5p): not done
-        R2 BVH saving and loading (1p): not done
-              R3 Simple texturing (1p): not done
-             R4 Ambient occlusion (2p): not done
-         R5 Simple multithreading (1p): not done
+R1 BVH construction and traversal (5p): done
+        R2 BVH saving and loading (1p): done
+              R3 Simple texturing (1p): done
+             R4 Ambient occlusion (2p): done
+         R5 Simple multithreading (1p):  done
 
 # Did you do any extra credit work?
-
+SAH, Efficient SAH building, Optimize your tracer(Tried but not satifying)
 (Describe what you did and, if there was a substantial amount of work involved, how you did it. If your extra features are interactive or can be toggled, describe how to use them.)
 
 # Are there any known problems/bugs remaining in your code?
+BVH contruction works. AO works without BVH, but sometimes not correct with BVH. I have put detail of this problem on the slack.
 
 (Please provide a list of the problems. If possible, describe what you think the cause is, how you have attempted to diagnose or fix the problem, and how you would attempt to diagnose or fix it if you had more time or motivation. This is important: we are more likely to assign partial credit if you help us understand what's going on.)
 
 # Did you collaborate with anyone in the class?
-
+No
 (Did you help others? Did others help you? Let us know who you talked to, and what sort of help you gave or received.)
 
 # Any other comments you'd like to share about the assignment or the course so far?

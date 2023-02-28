@@ -117,13 +117,11 @@ namespace FW
 		// function with the given ray and your root node. You can also use this
 		// function to do one-off things per ray like finding the elementwise
 		// reciprocal of the ray direction.
-		float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
-		int closest_i = -1;
 
-		RaycastResult castresult;
-
-		// Naive loop over all triangles; this will give you the correct results,
-		// but is terribly slow when ran for all triangles for each ray. Try it.
+#pragma region Naive Loop
+		//float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
+		//int closest_i = -1;
+		//RaycastResult castresult;
 		//for (int i = 0; i < (int)m_triangles->size(); ++i)
 		//{
 		//	float t, u, v;
@@ -143,6 +141,7 @@ namespace FW
 		//	castresult = RaycastResult(&(*m_triangles)[closest_i], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
 
 		//return castresult;
+#pragma endregion
 
 		Vec3f reci_dir_unit = 1.0f / dir;
 		return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
@@ -226,11 +225,11 @@ namespace FW
 		}
 
 
-		//Check each dimention if parallel
-		for (int i = 0; i < 3; ++i) {
-			if (dir[i] == 0.0f && (orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
-				return castresult;
-		}
+		////Check each dimention if parallel
+		//for (int i = 0; i < 3; ++i) {
+		//	if (dir[i] == 0.0f && (orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
+		//		return castresult;
+		//}
 
 		float t_hit = FLOAT_MIN;
 		if (!CheckIntersection(orig, dir, reci_dir, node, t_hit)) {
@@ -239,16 +238,16 @@ namespace FW
 		}
 
 		//Has intersections, Go deeper
-		float t_left_hit = FLOAT_MAX, t_right_hit = FLOAT_MAX;
-		bool hitLeft = false, hitRight = false;
-		hitLeft = CheckIntersection(orig, dir, reci_dir, *node.left, t_left_hit);
-		hitRight = CheckIntersection(orig, dir, reci_dir, *node.right, t_right_hit);
-		if (hitLeft && !hitRight)
-			//Only Hit Left
-			return raycastBvhIterator(orig, dir, reci_dir, *node.left);
-		if (!hitLeft && hitRight)
-			//Only Hit Right
-			return raycastBvhIterator(orig, dir, reci_dir, *node.right);
+		//float t_left_hit = FLOAT_MAX, t_right_hit = FLOAT_MAX;
+		//bool hitLeft = false, hitRight = false;
+		//hitLeft = CheckIntersection(orig, dir, reci_dir, *node.left, t_left_hit);
+		//hitRight = CheckIntersection(orig, dir, reci_dir, *node.right, t_right_hit);
+		//if (hitLeft && !hitRight)
+		//	//Only Hit Left
+		//	return raycastBvhIterator(orig, dir, reci_dir, *node.left);
+		//if (!hitLeft && hitRight)
+		//	//Only Hit Right
+		//	return raycastBvhIterator(orig, dir, reci_dir, *node.right);
 
 
 		//If both hit, compare the closest t

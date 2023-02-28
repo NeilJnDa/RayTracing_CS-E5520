@@ -1,0 +1,16 @@
+set_name scene_name state_name build_time(ms) trace_time(ms) ray_count
+first conference conference_chairs 289 2852 786432
+first conference conference_overview 297 1336 786432
+first indirect-test_mat indirect_test 29 754 786432
+first sponza sponza_overview 55 2136 786432
+first sponza sponza_window 58 2211 786432
+second conference conference_chairs 290 3161 786432
+second conference conference_overview 282 1439 786432
+second indirect-test_mat indirect_test 27 812 786432
+second sponza sponza_overview 62 2132 786432
+second sponza sponza_window 54 2552 786432
+third conference conference_chairs 293 2833 786432
+third conference conference_overview 323 1343 786432
+third indirect-test_mat indirect_test 29 723 786432
+third sponza sponza_overview 56 2194 786432
+third sponza sponza_window 55 2986 786432

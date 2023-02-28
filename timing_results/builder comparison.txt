@@ -1,0 +1,4 @@
+set_name scene_name state_name build_time(ms) trace_time(ms) ray_count
+sah conference conference_overview 297 18283 13367648
+sah sponza sponza_crytek 345 73 786432
+sah sponza-tessellated-1.3M sponza_tessellated 2548 2911 13109024

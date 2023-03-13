@@ -206,7 +206,8 @@ namespace FW {
 		{
 			n = -n;
 		}
-		Vec3f rayOrig = hit.point - hit.dir * 0.001f;
+		//A fatal error was found here: hit.dir shoule be used as normalized.
+		Vec3f rayOrig = hit.point - hit.dir.normalized() * 0.001f;
 		std::vector<FW::Vec3f> rayDir(m_aoNumRays);
 
 #pragma region Sampling

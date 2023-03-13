@@ -6,7 +6,7 @@
 #define FLOAT_MAX 3.40282e+38
 #define FLOAT_MIN -3.40282e+38
 #define BUCKETS 8
-#define N 40  //Max primitives in a bucket
+#define N 20  //Max primitives in a bucket
 namespace FW {
 
 

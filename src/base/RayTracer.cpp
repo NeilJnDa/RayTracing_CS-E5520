@@ -162,37 +162,21 @@ namespace FW
 		FW::F32 tstart = t1.max(); 
 		FW::F32 tend = t2.min(); 
 
-		//if (m_rayCount.load() == 300000) {
-		//    printf("Current Node Contains: %d, %d \n ", node.startPrim, node.endPrim);
-		//    FW::printVec3f("node.bb.min: ", node.bb.min);
-		//    FW::printVec3f("node.bb.max: ", node.bb.max);
-		//    FW::printVec3f("orig: ", orig);
-		//    FW::printVec3f("dir: ", dir);
-		//    FW::printVec3f("dir normalize: ", dir.normalized());
-		//    FW::printVec3f("reci_dir: ", reci_dir);
-		//    FW::printVec3f("t1: ", t1);
-		//    FW::printVec3f("t2: ", t2);
-		//    FW::printVec3f("tin: ", FW::min(t1, t2));
-		//    FW::printVec3f("tout: ", FW::max(t1, t2));
-		//    printf("tstart: %f \n", tstart);
-		//    printf("tend: %f \n", tend);
-		//    printf(" \n");
-		//}
-
-		//t_hit should be (0,1)
-		//NOTE: if all triangles are on a surface, one axis can be close to 0. 
-		//Thus when check intersections, the check should be <= rather than <
-		if (tstart <= tend) {
-			if (tstart >= 0 && tstart <= 1) {
-				t_hit = tstart;
-				return true;
-			}
-			else if (tstart <= 0 && tend <= 1) {
-				t_hit = tend;
-				return true;
-			}
-		}	
-		return false;
+		// A bug that I had before:
+		// t_hit should be [0, +¡Þ)£¬ rather than [0,1].
+		// Because when checking a large bouding box with a short ray, the ray orig in inside the bb,
+		// the tend might be large, however, there still probably exists intersection because smaller bounding boxs
+		// are inside this bouding box.
+		if (tstart > tend) return false;
+		if (tend < 0) return false;
+		if (tstart > 0 && tstart < 1) {
+			t_hit = tstart;
+			return true;
+		}
+		else if(tstart < 0){
+			t_hit = tend;
+			return true;
+		}
 	}
 	RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
 		RaycastResult castresult;

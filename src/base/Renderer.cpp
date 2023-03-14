@@ -200,7 +200,7 @@ namespace FW {
 	{
 		// YOUR CODE HERE (R4)
 
-		Vec4f color(1.0f);
+		Vec4f color = Vec4f(1.0f);
 		Vec3f n(hit.tri->normal());
 		if (dot(n, -hit.dir) <= 0)
 		{

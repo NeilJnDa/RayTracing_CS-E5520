@@ -220,21 +220,28 @@ namespace FW
 				}
 				continue;
 			}
-
-			if (currectNode->bb.contains(orig)) {
-				nodeStack.push(currectNode->left.get());
-				nodeStack.push(currectNode->right.get());
-				continue;
-			}
-			else {
-				float t_hit = FLOAT_MAX;
-				if (CheckIntersection(orig, dir, reci_dir, *currectNode, t_hit) && t_hit < best_t) {
-
+			float t_hit = FLOAT_MAX;
+			if (CheckIntersection(orig, dir, reci_dir, *currectNode, t_hit) && t_hit < best_t) {
+				if ((currectNode->left->bb.center() - orig).length() < (currectNode->right->bb.center() - orig).length()) {
+					nodeStack.push(currectNode->right.get());
+					nodeStack.push(currectNode->left.get());
+				}
+				else {
 					nodeStack.push(currectNode->left.get());
 					nodeStack.push(currectNode->right.get());
-
-					continue;
 				}
+				continue;
+			}
+			else if (currectNode->bb.contains(orig)) {
+				if ((currectNode->left->bb.center() - orig).length() < (currectNode->right->bb.center() - orig).length()) {
+					nodeStack.push(currectNode->right.get());
+					nodeStack.push(currectNode->left.get());
+				}
+				else {
+					nodeStack.push(currectNode->left.get());
+					nodeStack.push(currectNode->right.get());
+				}
+				continue;
 			}
 		}
 		return castresult;

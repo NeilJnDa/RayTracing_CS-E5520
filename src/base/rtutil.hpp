@@ -39,6 +39,9 @@ struct AABB {
         return point.x <= max.x && point.y <= max.y && point.z <= max.z
             && point.x >= min.x && point.y >= min.y && point.z >= min.z;
     }
+    inline Vec3f center() const {
+        return (min + max / 2.0f);
+    }
 };
 
 

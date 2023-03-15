@@ -794,7 +794,7 @@ void App::constructTracer()
 	m_rt.reset(new RayTracer());
 
 	// whether we want to try loading a saved hierarchy from disk
-	bool tryLoadHierarchy = false;
+	bool tryLoadHierarchy = true;
 
 	// always construct when measuring performance
 	if (m_settings.batch_render)

@@ -32,6 +32,8 @@ public:
     void				save(std::ostream& os);
 
 	uint32_t			getIndex(uint32_t index) const { return indices_[index]; }
+    void                construct(const std::vector<RTTriangle>& triangles, SplitMode splitMode);
+
 
 private:
 

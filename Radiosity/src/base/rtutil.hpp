@@ -34,6 +34,13 @@ struct AABB {
     inline F32 area() const {
         Vec3f d(max - min);
         return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
+    }    
+    inline bool contains(const Vec3f& point) const {
+        return point.x <= max.x && point.y <= max.y && point.z <= max.z
+            && point.x >= min.x && point.y >= min.y && point.z >= min.z;
+    }
+    inline Vec3f center() const {
+        return (min + max / 2.0f);
     }
 };
 

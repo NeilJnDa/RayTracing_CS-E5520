@@ -90,7 +90,6 @@ namespace FW
 	{
 		std::ifstream ifs(filename, std::ios::binary);
 		m_bvh = Bvh(ifs);
-
 		m_triangles = &triangles;
 	}
 

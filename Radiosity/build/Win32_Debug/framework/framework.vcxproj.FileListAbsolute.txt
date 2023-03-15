@@ -1,0 +1,1 @@
+E:\[Sync]\Aalto\Advanced Computer Graphics\Assignment\RayTracing_CS-E5520\Radiosity\build\Win32_Debug\framework\framework.lib

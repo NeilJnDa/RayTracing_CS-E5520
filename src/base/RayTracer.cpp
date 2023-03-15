@@ -7,6 +7,7 @@
 #include "rtIntersect.inl"
 #include <fstream>
 #include <algorithm>
+#include <stack>
 #include "rtlib.hpp"
 #define FLOAT_MAX 3.40282e+38
 #define FLOAT_MIN -3.40282e+38
@@ -144,8 +145,11 @@ namespace FW
 #pragma endregion
 
 		Vec3f reci_dir_unit = 1.0f / dir;
-		return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
+
+		return raycastBvhStack(orig, dir, reci_dir_unit, m_bvh.root());
+		//return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
 	}
+
 	bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const{
 		//Check Intersections with AABB
 		//t1: ray inject hit.  t2: ray leave hit.
@@ -177,6 +181,63 @@ namespace FW
 			t_hit = tend;
 			return true;
 		}
+	}
+	RaycastResult RayTracer::raycastBvhStack(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
+		std::stack<const BvhNode*> nodeStack;
+		nodeStack.push(&node); //Add Root
+		RaycastResult castresult;
+		float best_t = FLOAT_MAX;
+		while (!nodeStack.empty()) {
+			const BvhNode* currectNode = nodeStack.top();
+			nodeStack.pop();
+
+			if (!currectNode->hasChildren()) {
+				//Do traversal in a leaf node
+				//t range [0,1]
+				float closest_t = 1.0f, closest_u = 0.0f, closest_v = 0.0f;
+				int closest_i = -1;
+
+				// Naive loop over all triangles; this will give you the correct results,
+				// but is terribly slow when ran for all triangles for each ray. Try it.
+				for (int i = currectNode->startPrim; i < currectNode->endPrim; ++i)
+				{
+					float t, u, v;
+					if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
+					{
+						if (t > 0.0f && t < closest_t)
+						{
+							closest_i = i;
+							closest_t = t;
+							closest_u = u;
+							closest_v = v;
+						}
+					}
+				}
+				if (closest_i != -1 && closest_t < best_t) {
+					RaycastResult temp = RaycastResult(&(*m_triangles)[m_bvh.getIndex(closest_i)], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+					castresult = temp;
+					best_t = closest_t;
+				}
+				continue;
+			}
+
+			if (currectNode->bb.contains(orig)) {
+				nodeStack.push(currectNode->left.get());
+				nodeStack.push(currectNode->right.get());
+				continue;
+			}
+			else {
+				float t_hit = FLOAT_MAX;
+				if (CheckIntersection(orig, dir, reci_dir, *currectNode, t_hit) && t_hit < best_t) {
+
+					nodeStack.push(currectNode->left.get());
+					nodeStack.push(currectNode->right.get());
+
+					continue;
+				}
+			}
+		}
+		return castresult;
 	}
 	RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
 		RaycastResult castresult;

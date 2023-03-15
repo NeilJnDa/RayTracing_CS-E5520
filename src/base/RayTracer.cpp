@@ -209,18 +209,6 @@ namespace FW
 		}
 
 
-		////Check each dimention if parallel
-		//for (int i = 0; i < 3; ++i) {
-		//	if (dir[i] == 0.0f && (orig[i] < node.bb.min[i] || orig[i] < node.bb.max[i]))
-		//		return castresult;
-		//}
-
-		float t_hit = FLOAT_MIN;
-		if (!CheckIntersection(orig, dir, reci_dir, node, t_hit)) {
-			//No Intersection with this node's BB 
-			return castresult;
-		}
-
 		//Has intersections, Go deeper
 		float t_left_hit = FLOAT_MAX, t_right_hit = FLOAT_MAX;
 		bool hitLeft = false, hitRight = false;
@@ -232,39 +220,26 @@ namespace FW
 		if (!hitLeft && hitRight)
 			//Only Hit Right
 			return raycastBvhIterator(orig, dir, reci_dir, *node.right);
-
+		if (!hitLeft && !hitRight)
+			//Hit Nothing
+			return castresult;
 
 		//If both hit, compare the closest t
 		RaycastResult resultL, resultR;
-#pragma region Tried to escape early, but slower and render error
-
-		//If the orig is inside either child, do not escape ealier.
-		if (!node.right->bb.contains(orig) && !node.left->bb.contains(orig)) {
-			//Hit Left first, then right
-			if (t_left_hit < t_right_hit) {
-				//Find the actual hit point in the left
-				resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
-
-				//find an actual hit in left, and the actual hit t is lesser than closest hit of right BB
-				if (resultL.tri && resultL.t < t_right_hit)
-					return resultL;
-			}
-			//Hit Right first, then left
-			else {
-				resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
-				if (resultR.tri && resultR.t <t_left_hit )
-					return resultR;
-			}
-		}
-
 		//Otherwise, find the exact hit of both and compare.
-#pragma endregion
-
-		if (!resultL.tri)
+		//Traverse the closest node firstly
+		if (t_left_hit < t_right_hit) {
 			resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
-		if (!resultR.tri)
+			if (resultL.t < t_right_hit && !node.right->bb.contains(orig)) return resultL;
 			resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
-		return resultL.t < resultR.t ? resultL : resultR;
+			return resultL.t < resultR.t ? resultL : resultR;
+		}
+		else {
+			resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
+			if (resultR.t < t_left_hit && !node.left->bb.contains(orig)) return resultR;
+			resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+			return resultL.t < resultR.t ? resultL : resultR;
+		}
 
 	}
 

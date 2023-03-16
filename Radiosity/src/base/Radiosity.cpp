@@ -49,11 +49,11 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
 
 
 	// This is the dummy implementation you should remove.
-    ctx.m_vecResult[ v ] = n*0.5+0.5;
-    Sleep(1);
-    return;
+    //ctx.m_vecResult[ v ] = n*0.5+0.5;
+    //Sleep(1);
+    //return;
 
-    /*
+    
     // direct lighting pass? => integrate direct illumination by shooting shadow rays to light source
     if ( ctx.m_currentBounce == 0 )
     {
@@ -78,73 +78,73 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
         ctx.m_vecCurr[ v ] = E * (1.0f/ctx.m_numDirectRays);
         ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];
     }
-    else
-    {
-        // OK, time for indirect!
-        // Implement hemispherical gathering integral for bounces > 1.
+    //else
+    //{
+    //    // OK, time for indirect!
+    //    // Implement hemispherical gathering integral for bounces > 1.
 
-        // Get local coordinate system the rays are shot from.
-        Mat3f B = formBasis( n );
+    //    // Get local coordinate system the rays are shot from.
+    //    Mat3f B = formBasis( n );
 
-        Vec3f E(0.0f);
-        for ( int r = 0; r < ctx.m_numHemisphereRays; ++r )
-        {
-            // Draw a cosine weighted direction and find out where it hits (if anywhere)
-            // You need to transform it from the local frame to the vertex' hemisphere using B.
+    //    Vec3f E(0.0f);
+    //    for ( int r = 0; r < ctx.m_numHemisphereRays; ++r )
+    //    {
+    //        // Draw a cosine weighted direction and find out where it hits (if anywhere)
+    //        // You need to transform it from the local frame to the vertex' hemisphere using B.
 
-            // Make the direction long but not too long to avoid numerical instability in the ray tracer.
-            // For our scenes, 100 is a good length. (I know, this special casing sucks.)
+    //        // Make the direction long but not too long to avoid numerical instability in the ray tracer.
+    //        // For our scenes, 100 is a good length. (I know, this special casing sucks.)
 
-            // Shoot ray, see where we hit
-            const RaycastResult result = ctx.m_rt->raycast( o, d );
-            if ( result.tri != nullptr )
-            {
-                // interpolate lighting from previous pass
-				const Vec3i& indices = result.tri->m_data.vertex_indices;
+    //        // Shoot ray, see where we hit
+    //        const RaycastResult result = ctx.m_rt->raycast( o, d );
+    //        if ( result.tri != nullptr )
+    //        {
+    //            // interpolate lighting from previous pass
+				//const Vec3i& indices = result.tri->m_data.vertex_indices;
 
-                // check for backfaces => don't accumulate if we hit a surface from below!
+    //            // check for backfaces => don't accumulate if we hit a surface from below!
 
-                // fetch barycentric coordinates
+    //            // fetch barycentric coordinates
 
-                // Ei = interpolated irradiance determined by ctx.m_vecPrevBounce from vertices using the barycentric coordinates
-                Vec3f Ei = ...
+    //            // Ei = interpolated irradiance determined by ctx.m_vecPrevBounce from vertices using the barycentric coordinates
+    //            Vec3f Ei = ...
 
-                // Divide incident irradiance by PI so that we can turn it into outgoing
-                // radiosity by multiplying by the reflectance factor below.
-                Ei *= (1.0f / FW_PI);
+    //            // Divide incident irradiance by PI so that we can turn it into outgoing
+    //            // radiosity by multiplying by the reflectance factor below.
+    //            Ei *= (1.0f / FW_PI);
 
-                // check for texture
-                const auto mat = result.tri->m_material;
-                if ( mat->textures[MeshBase::TextureType_Diffuse].exists() )
-                {
-					
-					// read diffuse texture like in assignment1
+    //            // check for texture
+    //            const auto mat = result.tri->m_material;
+    //            if ( mat->textures[MeshBase::TextureType_Diffuse].exists() )
+    //            {
+				//	
+				//	// read diffuse texture like in assignment1
 
-                    const Texture& tex = mat->textures[MeshBase::TextureType_Diffuse];
-                    const Image& teximg = *tex.getImage();
+    //                const Texture& tex = mat->textures[MeshBase::TextureType_Diffuse];
+    //                const Image& teximg = *tex.getImage();
 
-                    // ...
-                }
-                else
-                {
-                    // no texture, use constant albedo from material structure.
-                    // (this is just one line)
-                }
+    //                // ...
+    //            }
+    //            else
+    //            {
+    //                // no texture, use constant albedo from material structure.
+    //                // (this is just one line)
+    //            }
 
-                E += Ei;	// accumulate
-            }
-        }
-        // Store result for this bounce
-        // Note that since we are storing irradiance, we multiply by PI(
-        // (Remember the slides about cosine weighted importance sampling!)
-        ctx.m_vecCurr[ v ] = E * (FW_PI / ctx.m_numHemisphereRays);
-        // Also add to the global accumulator.
-        ctx.m_vecResult[ v ] = ctx.m_vecResult[ v ] + ctx.m_vecCurr[ v ];
+    //            E += Ei;	// accumulate
+    //        }
+    //    }
+    //    // Store result for this bounce
+    //    // Note that since we are storing irradiance, we multiply by PI(
+    //    // (Remember the slides about cosine weighted importance sampling!)
+    //    ctx.m_vecCurr[ v ] = E * (FW_PI / ctx.m_numHemisphereRays);
+    //    // Also add to the global accumulator.
+    //    ctx.m_vecResult[ v ] = ctx.m_vecResult[ v ] + ctx.m_vecCurr[ v ];
 
-        // uncomment this to visualize only the current bounce
-        //ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];	
-    }
-    */
+    //    // uncomment this to visualize only the current bounce
+    //    //ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];	
+    //}
+    
 }
 // --------------------------------------------------------------------------
 

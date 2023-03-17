@@ -1,0 +1,2 @@
+#TargetFrameworkVersion=v4.0:PlatformToolSet=v142:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit:WindowsTargetPlatformVersion=10.0
+Release|Win32|\\home.org.aalto.fi\lij20\data\Documents\GitHub\RayTracing_CS-E5520\Radiosity\|

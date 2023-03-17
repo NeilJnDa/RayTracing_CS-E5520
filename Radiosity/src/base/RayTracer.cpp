@@ -123,10 +123,9 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
 
     // YOUR CODE HERE (R1):
     // Integrate your implementation here.
-    return m_rt->raycast(orig, dir);
 
-    Vec3f reci_dir_unit = 1.0f / dir;
-    return raycastBvhIterator(orig, dir, reci_dir_unit, m_bvh.root());
+    Vec3f reci_dir = 1.0f / dir;
+    return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
 }
 bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const {
 	//Check Intersections with AABB

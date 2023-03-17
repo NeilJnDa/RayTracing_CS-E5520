@@ -53,6 +53,8 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
     //Sleep(1);
     //return;
 
+	//New: Each Vertex has its own random generator
+	FW::Random rnd;
     
     // direct lighting pass? => integrate direct illumination by shooting shadow rays to light source
     if ( ctx.m_currentBounce == 0 )
@@ -62,88 +64,101 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
         {
             // draw sample on light source
             float pdf;
-            Vec3f Pl;
+            Vec3f Pl; 
+			
+			ctx.m_light->sample(pdf, Pl, 0, rnd);
 
             // construct vector from current vertex (o) to light sample
-
+			Vec3f d = Pl - o;
             // trace shadow ray to see if it's blocked
+			RaycastResult castResult = ctx.m_rt->raycast(o, d);
+			//printf("castResult %f \n", castResult.t);
+
+			if(castResult.t > 1)
             {
                 // if not, add the appropriate emission, 1/r^2 and clamped cosine terms, accounting for the PDF as well.
                 // accumulate into E
+				// If Hit Back?
+				E += ctx.m_light->getEmission()
+					* FW::clamp(FW::dot(-d.normalized(), ctx.m_light->getNormal()), 0.0f, 1.0f)
+					* FW::clamp(FW::dot(d.normalized(), n),0.0f,1.0f)  
+					/ d.lenSqr() 
+					/ pdf;
             }
         }
+		//printf("E %f \n", E.x);
         // Note we are NOT multiplying by PI here;
         // it's implicit in the hemisphere-to-light source area change of variables.
         // The result we are computing is _irradiance_, not radiosity.
         ctx.m_vecCurr[ v ] = E * (1.0f/ctx.m_numDirectRays);
-        ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];
+		ctx.m_vecResult[v] = ctx.m_vecCurr[v];
     }
-    //else
-    //{
-    //    // OK, time for indirect!
-    //    // Implement hemispherical gathering integral for bounces > 1.
+    else
+    {
+        // OK, time for indirect!
+        // Implement hemispherical gathering integral for bounces > 1.
 
-    //    // Get local coordinate system the rays are shot from.
-    //    Mat3f B = formBasis( n );
+        // Get local coordinate system the rays are shot from.
+        Mat3f B = formBasis( n );
 
-    //    Vec3f E(0.0f);
-    //    for ( int r = 0; r < ctx.m_numHemisphereRays; ++r )
-    //    {
-    //        // Draw a cosine weighted direction and find out where it hits (if anywhere)
-    //        // You need to transform it from the local frame to the vertex' hemisphere using B.
+        Vec3f E(0.0f);
+        for ( int r = 0; r < ctx.m_numHemisphereRays; ++r )
+        {
+            // Draw a cosine weighted direction and find out where it hits (if anywhere)
+            // You need to transform it from the local frame to the vertex' hemisphere using B.
 
-    //        // Make the direction long but not too long to avoid numerical instability in the ray tracer.
-    //        // For our scenes, 100 is a good length. (I know, this special casing sucks.)
+            // Make the direction long but not too long to avoid numerical instability in the ray tracer.
+            // For our scenes, 100 is a good length. (I know, this special casing sucks.)
+			Vec3f d(0);
+            // Shoot ray, see where we hit
+            const RaycastResult result = ctx.m_rt->raycast( o, d );
+            if ( result.tri != nullptr )
+            {
+                // interpolate lighting from previous pass
+				const Vec3i& indices = result.tri->m_data.vertex_indices;
 
-    //        // Shoot ray, see where we hit
-    //        const RaycastResult result = ctx.m_rt->raycast( o, d );
-    //        if ( result.tri != nullptr )
-    //        {
-    //            // interpolate lighting from previous pass
-				//const Vec3i& indices = result.tri->m_data.vertex_indices;
+                // check for backfaces => don't accumulate if we hit a surface from below!
 
-    //            // check for backfaces => don't accumulate if we hit a surface from below!
+                // fetch barycentric coordinates
 
-    //            // fetch barycentric coordinates
+                // Ei = interpolated irradiance determined by ctx.m_vecPrevBounce from vertices using the barycentric coordinates
+                //Vec3f Ei = ...
 
-    //            // Ei = interpolated irradiance determined by ctx.m_vecPrevBounce from vertices using the barycentric coordinates
-    //            Vec3f Ei = ...
+                // Divide incident irradiance by PI so that we can turn it into outgoing
+                // radiosity by multiplying by the reflectance factor below.
+                //Ei *= (1.0f / FW_PI);
 
-    //            // Divide incident irradiance by PI so that we can turn it into outgoing
-    //            // radiosity by multiplying by the reflectance factor below.
-    //            Ei *= (1.0f / FW_PI);
+                // check for texture
+                const auto mat = result.tri->m_material;
+                if ( mat->textures[MeshBase::TextureType_Diffuse].exists() )
+                {
+					
+					// read diffuse texture like in assignment1
 
-    //            // check for texture
-    //            const auto mat = result.tri->m_material;
-    //            if ( mat->textures[MeshBase::TextureType_Diffuse].exists() )
-    //            {
-				//	
-				//	// read diffuse texture like in assignment1
+                    const Texture& tex = mat->textures[MeshBase::TextureType_Diffuse];
+                    const Image& teximg = *tex.getImage();
 
-    //                const Texture& tex = mat->textures[MeshBase::TextureType_Diffuse];
-    //                const Image& teximg = *tex.getImage();
+                    // ...
+                }
+                else
+                {
+                    // no texture, use constant albedo from material structure.
+                    // (this is just one line)
+                }
 
-    //                // ...
-    //            }
-    //            else
-    //            {
-    //                // no texture, use constant albedo from material structure.
-    //                // (this is just one line)
-    //            }
+                //E += Ei;	// accumulate
+            }
+        }
+        // Store result for this bounce
+        // Note that since we are storing irradiance, we multiply by PI(
+        // (Remember the slides about cosine weighted importance sampling!)
+        ctx.m_vecCurr[ v ] = E * (FW_PI / ctx.m_numHemisphereRays);
+        // Also add to the global accumulator.
+        ctx.m_vecResult[ v ] = ctx.m_vecResult[ v ] + ctx.m_vecCurr[ v ];
 
-    //            E += Ei;	// accumulate
-    //        }
-    //    }
-    //    // Store result for this bounce
-    //    // Note that since we are storing irradiance, we multiply by PI(
-    //    // (Remember the slides about cosine weighted importance sampling!)
-    //    ctx.m_vecCurr[ v ] = E * (FW_PI / ctx.m_numHemisphereRays);
-    //    // Also add to the global accumulator.
-    //    ctx.m_vecResult[ v ] = ctx.m_vecResult[ v ] + ctx.m_vecCurr[ v ];
-
-    //    // uncomment this to visualize only the current bounce
-    //    //ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];	
-    //}
+        // uncomment this to visualize only the current bounce
+        //ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];	
+    }
     
 }
 // --------------------------------------------------------------------------
@@ -176,8 +191,8 @@ void Radiosity::startRadiosityProcess( MeshWithColors* scene, AreaLight* light, 
 	m_context.m_vecSphericalZ.assign(scene->numVertices(), Vec3f(0, 0, 0));
 
     // fire away!
-    //m_launcher.setNumThreads(m_launcher.getNumCores());	// the solution exe is multithreaded
-    m_launcher.setNumThreads(1);							// but you have to make sure your code is thread safe before enabling this!
+    m_launcher.setNumThreads(m_launcher.getNumCores());	// the solution exe is multithreaded
+    //m_launcher.setNumThreads(1);							// but you have to make sure your code is thread safe before enabling this!
     m_launcher.popAll();
     m_launcher.push( vertexTaskFunc, &m_context, 0, scene->numVertices() );
 }

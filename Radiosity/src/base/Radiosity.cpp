@@ -106,10 +106,19 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
         {
             // Draw a cosine weighted direction and find out where it hits (if anywhere)
             // You need to transform it from the local frame to the vertex' hemisphere using B.
-
             // Make the direction long but not too long to avoid numerical instability in the ray tracer.
             // For our scenes, 100 is a good length. (I know, this special casing sucks.)
 			Vec3f d(0);
+            // Slow, Uniform: rejection sampling
+            // Get a sample direction inside a unit sphere
+            do {
+                d.x = rnd.getF32(-1.0f, 1.0f);
+                d.y = rnd.getF32(-1.0f, 1.0f);
+            } while (d.length() > 1);
+            d.z = sqrt(1 - d.x * d.x - d.y * d.y);
+
+            d = B * d * 100.0f;
+
             // Shoot ray, see where we hit
             const RaycastResult result = ctx.m_rt->raycast( o, d );
             if ( result.tri != nullptr )
@@ -118,15 +127,18 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
 				const Vec3i& indices = result.tri->m_data.vertex_indices;
 
                 // check for backfaces => don't accumulate if we hit a surface from below!
-
+                if (FW::dot(result.tri->normal(), d) > 0) continue;
                 // fetch barycentric coordinates
-
                 // Ei = interpolated irradiance determined by ctx.m_vecPrevBounce from vertices using the barycentric coordinates
                 //Vec3f Ei = ...
+                Vec3f Ei =
+                    result.u * ctx.m_vecPrevBounce[indices[0]]
+                    + result.v * ctx.m_vecPrevBounce[indices[1]]
+                    + (1 - result.u - result.v) * ctx.m_vecPrevBounce[indices[2]];
 
                 // Divide incident irradiance by PI so that we can turn it into outgoing
                 // radiosity by multiplying by the reflectance factor below.
-                //Ei *= (1.0f / FW_PI);
+                Ei *= (1.0f / FW_PI);
 
                 // check for texture
                 const auto mat = result.tri->m_material;
@@ -138,15 +150,21 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
                     const Texture& tex = mat->textures[MeshBase::TextureType_Diffuse];
                     const Image& teximg = *tex.getImage();
 
-                    // ...
+                    Vec2f uv = 
+                        result.u * ctx.m_scene->vertex(indices[0]).t
+                        + result.v * ctx.m_scene->vertex(indices[1]).t
+                        + (1 - result.u - result.v) * ctx.m_scene->vertex(indices[2]).t;
+                    Vec2i texelCoords = getTexelCoords(Vec2f(result.u, result.v), teximg.getSize());
+                    Ei *= teximg.getVec4f(texelCoords).getXYZ();
                 }
                 else
                 {
                     // no texture, use constant albedo from material structure.
                     // (this is just one line)
+                    Ei *= mat->diffuse.getXYZ();
                 }
 
-                //E += Ei;	// accumulate
+                E += Ei;	// accumulate
             }
         }
         // Store result for this bounce

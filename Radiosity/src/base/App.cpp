@@ -35,7 +35,8 @@ App::App(std::vector<std::string>& cmd_args)
 	: m_commonCtrl(CommonControls::Feature_Default & ~CommonControls::Feature_RepaintOnF5),
 	m_cameraCtrl(&m_commonCtrl, CameraControls::Feature_Default | CameraControls::Feature_StereoControls),
 	m_action(Action_None),
-	m_cullMode(CullMode_None),
+	m_cullMode(CullMode_None),,
+	//m_renderMode(),
 	m_numHemisphereRays (256),
 	m_numDirectRays	    (16),
 	m_numBounces        (1),
@@ -79,6 +80,8 @@ App::App(std::vector<std::string>& cmd_args)
 	m_commonCtrl.addButton((S32*)&m_action, Action_FlipTriangles, FW_KEY_NONE, "Flip triangles");
 	m_commonCtrl.addSeparator();
 
+
+
 	//    m_commonCtrl.addButton((S32*)&m_action, Action_CleanMesh,               FW_KEY_NONE,    "Remove unused materials, denegerate triangles, and unreferenced vertices");
 	//    m_commonCtrl.addButton((S32*)&m_action, Action_CollapseVertices,        FW_KEY_NONE,    "Collapse duplicate vertices");
 	//    m_commonCtrl.addButton((S32*)&m_action, Action_DupVertsPerSubmesh,      FW_KEY_NONE,    "Duplicate vertices shared between multiple materials");
@@ -92,6 +95,11 @@ App::App(std::vector<std::string>& cmd_args)
 	m_commonCtrl.addButton((S32*)&m_action, Action_PlaceLightSourceAtCamera,FW_KEY_SPACE,   "Place light at camera (SPACE)");
 	m_commonCtrl.addButton((S32*)&m_action, Action_LoadRadiosity,			FW_KEY_NONE,	"Load radiosity solution");
 	m_commonCtrl.addButton((S32*)&m_action, Action_SaveRadiosity,			FW_KEY_NONE,	"Save radiosity solution");
+
+	////New
+	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_None, FW_KEY_NONE, "Disable backface culling");
+	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_CW, FW_KEY_NONE, "Cull clockwise faces");
+	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_CCW, FW_KEY_NONE, "Cull counter-clockwise faces");
 
 	m_commonCtrl.beginSliderStack();
 	m_commonCtrl.addSlider(&m_numDirectRays, 1, 1024, true, FW_KEY_NONE, FW_KEY_NONE, "Direct lighting rays= %d");

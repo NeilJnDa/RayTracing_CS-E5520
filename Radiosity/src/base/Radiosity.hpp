@@ -37,7 +37,7 @@ public:
     void	checkFinish();	
 
     // copy the current solution to the mesh colors for display. returns true if successful.
-	bool	updateMeshColors(std::vector<Vec4f>& spherical1, std::vector<Vec4f>& spherical2, std::vector<float>& spherical3, bool spherical);
+	bool	updateMeshColors(std::vector<Vec4f>& spherical1, std::vector<Vec4f>& spherical2, std::vector<float>& spherical3, bool spherical, int renderMode);
 
 protected:
     MulticoreLauncher	m_launcher;
@@ -64,11 +64,19 @@ protected:
         std::vector<Vec3f>	m_vecPrevBounce;	// Once a bounce finishes, the results are copied here to be used as the input illumination to the next bounce.
         std::vector<Vec3f>	m_vecResult;		// This vector should hold a sum of all bounces (used for display).
 		std::vector<Vec3f>	m_vecSphericalC, m_vecSphericalX, m_vecSphericalY, m_vecSphericalZ;		// For the spherical harmonics extra: these hold the sums for spherical harmonic coefficients, similarly to m_vecResult.
+        
+        //New: Visualizing bounces separately
+        std::vector<Vec3f>  m_vecDirect;
+        std::vector<Vec3f>  m_vecFirstBounce;
+        std::vector<Vec3f>  m_vecSecondBounce;
+
     };
 
     static void vertexTaskFunc( MulticoreLauncher::Task& );
 
     RadiosityContext		m_context;
+
+
 
 };
 

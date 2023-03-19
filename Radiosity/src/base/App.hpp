@@ -62,7 +62,13 @@ private:
         Action_ComputeRadiosity,
         Action_LoadRadiosity,
         Action_SaveRadiosity,
-		Action_ToggleSphericalHarmonics
+		Action_ToggleSphericalHarmonics,
+
+        // New: Visualizing bounces separately
+        Action_RenderMode_All,
+        Action_RenderMode_Direct,
+        Action_RenderMode_FirstBounce,
+        Action_RenderMode_SecondBounce,
     };
 
     enum CullMode
@@ -72,6 +78,15 @@ private:
         CullMode_CCW,
     };
     
+    //New: Visualizing bounces separately
+    enum RenderMode 
+    {
+        RenderMode_All = 0,
+        RenderMode_Direct = 1,
+        RenderMode_FirstBounce = 2,
+        RenderMode_SecondBounce = 3
+    };
+
     struct RayVertex
     {
         Vec3f       pos;
@@ -146,6 +161,7 @@ private:
     Action          m_action;
     String          m_meshFileName;
     CullMode        m_cullMode;
+    RenderMode      m_renderMode;
 	Timer			m_timer;
 
     std::unique_ptr<RayTracer>			m_rt;

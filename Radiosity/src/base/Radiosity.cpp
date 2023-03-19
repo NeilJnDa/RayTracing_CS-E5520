@@ -92,6 +92,9 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
         // The result we are computing is _irradiance_, not radiosity.
         ctx.m_vecCurr[ v ] = E * (1.0f/ctx.m_numDirectRays);
 		ctx.m_vecResult[v] = ctx.m_vecCurr[v];
+
+        //New: Visualizing bounces separately
+        ctx.m_vecDirect[v] = ctx.m_vecCurr[v];
     }
     else
     {
@@ -176,6 +179,12 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
 
         // uncomment this to visualize only the current bounce
         //ctx.m_vecResult[ v ] = ctx.m_vecCurr[ v ];	
+
+
+        //New: Visualizing bounces separately
+        if(ctx.m_currentBounce == 1) ctx.m_vecFirstBounce[v] = ctx.m_vecCurr[v];
+        if(ctx.m_currentBounce == 2) ctx.m_vecSecondBounce[v] = ctx.m_vecCurr[v];
+
     }
     
 }
@@ -197,6 +206,15 @@ void Radiosity::startRadiosityProcess( MeshWithColors* scene, AreaLight* light, 
     m_context.m_vecCurr.resize( scene->numVertices() );
     m_context.m_vecPrevBounce.resize( scene->numVertices() );
     m_context.m_vecResult.assign( scene->numVertices(), Vec3f(0,0,0) );
+    
+    //New: Visualizing bounces separately
+    m_context.m_vecDirect.clear();
+    m_context.m_vecFirstBounce.clear();
+    m_context.m_vecSecondBounce.clear();
+    m_context.m_vecDirect.resize(scene->numVertices());
+    m_context.m_vecFirstBounce.resize(scene->numVertices());
+    m_context.m_vecSecondBounce.resize(scene->numVertices());
+
 
 	m_context.m_vecSphericalC.resize(scene->numVertices());
 	m_context.m_vecSphericalX.resize(scene->numVertices());
@@ -216,11 +234,11 @@ void Radiosity::startRadiosityProcess( MeshWithColors* scene, AreaLight* light, 
 }
 // --------------------------------------------------------------------------
 
-bool Radiosity::updateMeshColors(std::vector<Vec4f>& spherical1, std::vector<Vec4f>& spherical2, std::vector<float>& spherical3, bool spherical)
+bool Radiosity::updateMeshColors(std::vector<Vec4f>& spherical1, std::vector<Vec4f>& spherical2, std::vector<float>& spherical3, bool spherical, int renderMode)
 {
 	if (!m_context.m_scene || m_context.m_vecResult.size()==0) return false;
     // Print progress.
-    printf( "%.2f%% done     \r", 100.0f*m_launcher.getNumFinished()/m_context.m_scene->numVertices() );
+    if(isRunning()) printf( "%.2f%% done     \r", 100.0f*m_launcher.getNumFinished()/m_context.m_scene->numVertices() );
 
     // Copy irradiance over to the display mesh.
     // Because we want outgoing radiosity in the end, we divide by PI here
@@ -236,7 +254,15 @@ bool Radiosity::updateMeshColors(std::vector<Vec4f>& spherical1, std::vector<Vec
 			spherical2[i] = Vec4f(m_context.m_vecSphericalY[i], m_context.m_vecSphericalZ[i].z) * (1.0f / FW_PI);
 		}
 		else {
-			m_context.m_scene->mutableVertex(i).c = m_context.m_vecResult[i] * (1.0f / FW_PI);
+            //New: Visualizing bounces separately
+            if (renderMode == 1)
+                m_context.m_scene->mutableVertex(i).c = m_context.m_vecDirect[i] * (1.0f / FW_PI);
+            else if(renderMode == 2)
+                m_context.m_scene->mutableVertex(i).c = m_context.m_vecFirstBounce[i] * (1.0f / FW_PI);
+            else if (renderMode == 3)
+                m_context.m_scene->mutableVertex(i).c = m_context.m_vecSecondBounce[i] * (1.0f / FW_PI);
+            else
+                m_context.m_scene->mutableVertex(i).c = m_context.m_vecResult[i] * (1.0f / FW_PI);
 		}
 	}
 	return true;

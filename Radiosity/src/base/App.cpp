@@ -35,8 +35,8 @@ App::App(std::vector<std::string>& cmd_args)
 	: m_commonCtrl(CommonControls::Feature_Default & ~CommonControls::Feature_RepaintOnF5),
 	m_cameraCtrl(&m_commonCtrl, CameraControls::Feature_Default | CameraControls::Feature_StereoControls),
 	m_action(Action_None),
-	m_cullMode(CullMode_None),,
-	//m_renderMode(),
+	m_cullMode(CullMode_None),
+	m_renderMode(RenderMode_All),
 	m_numHemisphereRays (256),
 	m_numDirectRays	    (16),
 	m_numBounces        (1),
@@ -96,10 +96,14 @@ App::App(std::vector<std::string>& cmd_args)
 	m_commonCtrl.addButton((S32*)&m_action, Action_LoadRadiosity,			FW_KEY_NONE,	"Load radiosity solution");
 	m_commonCtrl.addButton((S32*)&m_action, Action_SaveRadiosity,			FW_KEY_NONE,	"Save radiosity solution");
 
-	////New
-	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_None, FW_KEY_NONE, "Disable backface culling");
-	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_CW, FW_KEY_NONE, "Cull clockwise faces");
-	//m_commonCtrl.addToggle((S32*)&m_cullMode, CullMode_CCW, FW_KEY_NONE, "Cull counter-clockwise faces");
+	//New: Visualizing bounces separately
+	m_commonCtrl.addSeparator();
+	m_commonCtrl.addButton((S32*)&m_action, Action_RenderMode_All, FW_KEY_NONE, "GI: Render all");
+	m_commonCtrl.addButton((S32*)&m_action, Action_RenderMode_Direct, FW_KEY_NONE, "GI: Render direct only");
+	m_commonCtrl.addButton((S32*)&m_action, Action_RenderMode_FirstBounce, FW_KEY_NONE, "GI: Render first bounce only");
+	m_commonCtrl.addButton((S32*)&m_action, Action_RenderMode_SecondBounce, FW_KEY_NONE, "GI: Render second bounce only");
+
+
 
 	m_commonCtrl.beginSliderStack();
 	m_commonCtrl.addSlider(&m_numDirectRays, 1, 1024, true, FW_KEY_NONE, FW_KEY_NONE, "Direct lighting rays= %d");
@@ -460,6 +464,26 @@ bool App::handleEvent(const Window::Event& ev)
 		if (name.getLength())
 			saveRadiosity(name);
 		break;
+	case Action_RenderMode_All:
+		m_commonCtrl.message("Render Mode: All");
+		m_renderMode = RenderMode::RenderMode_All;
+		m_shChanged = true;
+		break;
+	case Action_RenderMode_Direct:
+		m_commonCtrl.message("Render Mode: Direct only");
+		m_renderMode = RenderMode::RenderMode_Direct;
+		m_shChanged = true;
+		break;
+	case Action_RenderMode_FirstBounce:
+		m_commonCtrl.message("Render Mode: First bounce only");
+		m_renderMode = RenderMode::RenderMode_FirstBounce;
+		m_shChanged = true;
+		break;
+	case Action_RenderMode_SecondBounce:
+		m_commonCtrl.message("Render Mode: Second bounce only");
+		m_renderMode = RenderMode::RenderMode_SecondBounce;
+		m_shChanged = true;
+		break;
 	default:
 		FW_ASSERT(false);
 		break;
@@ -577,11 +601,12 @@ void App::renderFrame(GLContext* gl)
 	GLContext::checkErrors();
 
 	// if we are computing radiosity, refresh mesh colors every 0.5 seconds
+
 	if (m_shChanged || (m_radiosity->isRunning() && m_updateClock.getElapsed() > 0.5f ))
 	{
 		m_shChanged = false;
 
-		if (m_radiosity->updateMeshColors(m_sphericalResults1, m_sphericalResults2, m_sphericalResults3, m_enableSH)) {
+		if (m_radiosity->updateMeshColors(m_sphericalResults1, m_sphericalResults2, m_sphericalResults3, m_enableSH, (int)m_renderMode)) {
 			if (m_radiosity->isRunning())
 				m_radiosity->checkFinish();
 

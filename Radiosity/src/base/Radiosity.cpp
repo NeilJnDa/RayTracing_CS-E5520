@@ -66,7 +66,7 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
             float pdf;
             Vec3f Pl; 
 			
-			ctx.m_light->sample(pdf, Pl, 0, rnd);
+			ctx.m_light->sample(pdf, Pl, r, rnd);
 
             // construct vector from current vertex (o) to light sample
 			Vec3f d = Pl - o;

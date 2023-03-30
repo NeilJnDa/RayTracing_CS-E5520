@@ -1,9 +1,8 @@
 
 #include "AreaLight.hpp"
-
+#include "QMC.hpp"
 
 namespace FW {
-
 
 void AreaLight::draw(const Mat4f& worldToCamera, const Mat4f& projection) {
     glUseProgram(0);
@@ -19,16 +18,7 @@ void AreaLight::draw(const Mat4f& worldToCamera, const Mat4f& projection) {
     glVertex3f(1,1,0); glVertex3f( -1,-1,0 ); glVertex3f(-1,1,0); 
     glEnd();
 }
-float vanDerCorput(int n, const int& base = 2)
-{
-	float rand = 0, denom = 1, invBase = 1.f / base;
-	while (n) {
-		denom *= base;  //2, 4, 8, 16, etc, 2^1, 2^2, 2^3, 2^4 etc. 
-		rand += (n % base) / denom;
-		n *= invBase;  //divide by 2 
-	}
-	return rand;
-}
+
 void AreaLight::sample(float& pdf, Vec3f& p, int i, Random& rnd) {
     // YOUR CODE HERE (R2):
     // You should draw a random point on the light source and evaluate the PDF.
@@ -53,7 +43,7 @@ void AreaLight::sample(float& pdf, Vec3f& p, int i, Random& rnd) {
     //p = Vec4f(m_xform.getCol(3)).getXYZ();
     
 	//Quasi-monto carlo: Halton
-	Vec2f samplePoint(vanDerCorput(i, 2), vanDerCorput(i, 3));
+    Vec2f samplePoint = qmc.GetVec2fSampleByHalton(i);
 	Mat4f S = Mat4f::scale(Vec3f(m_size, 1.0f));
 	p = (m_xform * S * Vec4f(samplePoint.x, samplePoint.y, 0.0f, 1.0f)).getXYZ();
 	pdf = 1.0 / 4.0f / m_size.x / m_size.y;

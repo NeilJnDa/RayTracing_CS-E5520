@@ -16,3 +16,5 @@ void Statusbar::update(size_t val) {
         last = val;
     }
 }
+
+

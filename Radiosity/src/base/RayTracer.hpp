@@ -57,8 +57,9 @@ private:
     
     Bvh m_bvh; // Replace the above with your own Bvh and whatever other member variables you have
 
-
 };
 
 
 } // namespace FW
+
+

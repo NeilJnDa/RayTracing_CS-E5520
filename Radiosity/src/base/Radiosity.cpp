@@ -1,13 +1,14 @@
 #include "Radiosity.hpp"
 #include "AreaLight.hpp"
 #include "RayTracer.hpp"
-
+#include "QMC.hpp"
 
 
 namespace FW {
 
 
 // --------------------------------------------------------------------------
+QMC Radiosity::m_qmc;
 
 Radiosity::~Radiosity()
 {
@@ -55,7 +56,7 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
 
 	//New: Each Vertex has its own random generator
 	FW::Random rnd;
-    
+
     // direct lighting pass? => integrate direct illumination by shooting shadow rays to light source
     if ( ctx.m_currentBounce == 0 )
     {
@@ -123,8 +124,10 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
     //        d.z = sqrt(1 - d.x * d.x - d.y * d.y);
 
 			// quasi with halton sequence. Also cosine-weighted
-			float theta = FW::acos(FW::sqrt( FW::vanDerCorput(r, 2)));
-			float phi = 2.0f * 3.1415926535f * FW::vanDerCorput(r, 3);
+            // https://alexanderameye.github.io/notes/sampling-the-hemisphere/
+            Vec2f sample = m_qmc.GetVec2fSampleByHalton(r);
+            float theta = FW::acos(sample.x);
+			float phi = 2.0f * 3.1415926535f * sample.y;
 			d.x = FW::sin(theta) * FW::cos(phi);
 			d.y = FW::sin(theta) * FW::sin(phi);
 			d.z = FW::cos(theta);

@@ -593,11 +593,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Accelerated Ray Tracing\src\base\Bvh.cpp" />
-    <ClCompile Include="..\Accelerated Ray Tracing\src\base\BvhNode.cpp" />
     <ClCompile Include="src\base\App.cpp" />
     <ClCompile Include="src\base\AreaLight.cpp" />
+    <ClCompile Include="src\base\Bvh.cpp" />
+    <ClCompile Include="src\base\BvhNode.cpp" />
     <ClCompile Include="src\base\Md5.c" />
+    <ClCompile Include="src\base\QMC.cpp" />
     <ClCompile Include="src\base\Radiosity.cpp" />
     <ClCompile Include="src\base\RayTracer.cpp" />
     <ClCompile Include="src\base\util.cpp" />
@@ -608,6 +609,7 @@
     <ClInclude Include="src\base\Bvh.hpp" />
     <ClInclude Include="src\base\BvhNode.hpp" />
     <ClInclude Include="src\base\filesaves.hpp" />
+    <ClInclude Include="src\base\QMC.hpp" />
     <ClInclude Include="src\base\Radiosity.hpp" />
     <ClInclude Include="src\base\RaycastResult.hpp" />
     <ClInclude Include="src\base\RayTracer.hpp" />

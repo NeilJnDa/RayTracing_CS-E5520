@@ -6,12 +6,13 @@
 #include <3d/Mesh.hpp>
 
 #include <vector>
-
+#include "QMC.hpp"
 namespace FW
 {
 
 class AreaLight;
 class RayTracer;
+class QMC;
 
 float sphericalHarmonicFactor(int order, int index);
 
@@ -75,9 +76,7 @@ protected:
     static void vertexTaskFunc( MulticoreLauncher::Task& );
 
     RadiosityContext		m_context;
-
-
-
+    static QMC              m_qmc;
 };
 
 } // namepace FW

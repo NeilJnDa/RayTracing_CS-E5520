@@ -3,13 +3,13 @@
 #include <base/Math.hpp>
 #include <base/Random.hpp>
 #include <io/StateDump.hpp>
-
-
+#include "QMC.hpp"
+#include "Raytracer.hpp"
 namespace FW
 {
 
 class GLContext;
-
+class QMC;
 //------------------------------------------------------------------------
 // a simple square-shaped area light source.
 
@@ -45,6 +45,7 @@ protected:
     Mat4f	m_xform;	// Encodes position and orientation in world space.
     Vec2f	m_size;		// Physical size of the emitter from the center of the light. I.e. half of the total width/height.
     Vec3f	m_E;		// Diffuse emission (W/m^2).
+    QMC     qmc;
 };
 
 } // namespace FW

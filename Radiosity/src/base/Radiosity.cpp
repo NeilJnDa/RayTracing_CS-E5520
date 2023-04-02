@@ -114,23 +114,24 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
             // For our scenes, 100 is a good length. (I know, this special casing sucks.)
 			Vec3f d(0);
 
-            // Rejection sampling
+             //Rejection sampling
             // Get a sample direction inside a unit sphere, this is cosine-weighted
-    //        do {
-				////Purely Random
-    //            d.x = rnd.getF32(-1.0f, 1.0f);
-    //            d.y = rnd.getF32(-1.0f, 1.0f);
-    //        } while (d.length() > 1);
-    //        d.z = sqrt(1 - d.x * d.x - d.y * d.y);
-
+            do {
+				//Purely Random
+                d.x = rnd.getF32(-1.0f, 1.0f);
+                d.y = rnd.getF32(-1.0f, 1.0f);
+            } while (d.length() > 1);
+            d.z = sqrt(1 - d.x * d.x - d.y * d.y);
+            
 			// quasi with halton sequence. Also cosine-weighted
             // https://alexanderameye.github.io/notes/sampling-the-hemisphere/
-            Vec2f sample = m_qmc.GetVec2fSampleByHalton(r);
-            float theta = FW::acos(sample.x);
-			float phi = 2.0f * 3.1415926535f * sample.y;
-			d.x = FW::sin(theta) * FW::cos(phi);
-			d.y = FW::sin(theta) * FW::sin(phi);
-			d.z = FW::cos(theta);
+   //         Vec2f sample = m_qmc.GetVec2fSampleByHalton(r);
+   //         float theta = FW::acos(FW::sqrt(sample.x));
+			//float phi = 2.0f * FW_PI * sample.y;
+			//d.x = FW::sin(theta) * FW::cos(phi);
+			//d.y = FW::sin(theta) * FW::sin(phi);
+			//d.z = FW::cos(theta);
+
 
             d = B * d * 100.0f;
 
@@ -196,9 +197,7 @@ void Radiosity::vertexTaskFunc( MulticoreLauncher::Task& task )
         //New: Visualizing bounces separately
         if(ctx.m_currentBounce == 1) ctx.m_vecFirstBounce[v] = ctx.m_vecCurr[v];
         if(ctx.m_currentBounce == 2) ctx.m_vecSecondBounce[v] = ctx.m_vecCurr[v];
-
-    }
-    
+    } 
 }
 // --------------------------------------------------------------------------
 

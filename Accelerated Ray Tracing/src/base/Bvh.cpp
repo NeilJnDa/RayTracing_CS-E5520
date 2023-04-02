@@ -5,8 +5,8 @@
 
 #define FLOAT_MAX 3.40282e+38
 #define FLOAT_MIN -3.40282e+38
-#define BUCKETS 8
-#define N 10  //Max primitives in a bucket
+#define BUCKETS 10
+#define N 20 //Max primitives in a bucket
 namespace FW {
 
 
@@ -38,14 +38,14 @@ namespace FW {
 		rootNode_.reset(new BvhNode(loader));
 	}
 	void printNodeInfo(std::unique_ptr<BvhNode>& node, const std::vector<RTTriangle>& triangles, SplitMode splitMode, std::vector<uint32_t>& indices_, int depth) {
-		if(!node->hasChildren())
+		if (!node->hasChildren())
 			printf("____________Leaf: depth: %d \n", depth);
 		else
 			printf("____________Node: depth: %d \n", depth);
 
 		printf("Prims : %d \n", node->endPrim - node->startPrim);
-		FW::printVec3f("BB min", node->bb.min);
-		FW::printVec3f("BB max", node->bb.max);
+		//FW::printVec3f("BB min", node->bb.min);
+		//FW::printVec3f("BB max", node->bb.max);
 
 		printf("node start: %d \n", node->startPrim);
 		printf("node end: %d \n", node->endPrim);
@@ -57,7 +57,7 @@ namespace FW {
 			//FW::printVec3f("Triangle Center", triangles[indices_[i]].centroid());
 			averageCenter += triangles[indices_[i]].centroid();
 		}
-		FW::printVec3f("AverageCenter", averageCenter / (node->endPrim - node->startPrim));
+		//FW::printVec3f("AverageCenter", averageCenter / (node->endPrim - node->startPrim));
 		printf("\n");
 	}
 	void constructIterator(std::unique_ptr<BvhNode>& node, const std::vector<RTTriangle>& triangles, SplitMode splitMode, std::vector<uint32_t>& indices_, int depth) {
@@ -65,7 +65,7 @@ namespace FW {
 		node->bb.min = Vec3f(FLOAT_MAX, FLOAT_MAX, FLOAT_MAX);
 		node->bb.max = Vec3f(FLOAT_MIN, FLOAT_MIN, FLOAT_MIN);
 
-		
+
 		//Find partition according to BB of triangles centroids. This could prevent from a too large triangle making it hard to partition
 		//tcBB: Triangles Centroids Bounding Box
 		AABB tcBB(Vec3f(FLOAT_MAX, FLOAT_MAX, FLOAT_MAX), Vec3f(FLOAT_MIN, FLOAT_MIN, FLOAT_MIN));
@@ -148,16 +148,15 @@ namespace FW {
 #pragma region SAH Surface Area Heuristic Partition
 		if (splitMode == SplitMode::SplitMode_Sah) {
 			FW::Vec3f diagonal = node->bb.max - node->bb.min;
-			FW::Vec3f diagonal_tc = tcBB.max - tcBB.min;
 			float minSAH = FLOAT_MAX;
 			int minSAHAxis = 0;
 			float minPlane = 0;
 
 			//Check Partition for each axis
 			for (int axis = 0; axis < 3; ++axis) {
-				float interval = diagonal_tc[axis] / BUCKETS;
+				float interval = diagonal[axis] / (float)BUCKETS;
 
-				if (diagonal_tc[axis] < 1e-3) {
+				if (diagonal[axis] < 1e-3) {
 					//To small scale, do not split
 					//printf("Too small Splitting! axis: %f, diagonal_tc[axis]: %f \n", axis, diagonal_tc[axis]);
 					continue;
@@ -165,25 +164,25 @@ namespace FW {
 
 				//For each axis, do several times of checking with uniformly distributed interval.
 				//Dynamic Programming: Store the number of triangles in the left node outside the loop
-				//Since the bucket starts from tcBB.min rather than node->bb.min. There are two more space before the first bucket and after the last.
-				std::vector<int> triangles_count(BUCKETS + 2, 0);
-				std::for_each(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim, 
+				std::vector<int> triangles_count(BUCKETS, 0);
+				std::for_each(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim,
 					[&](int a) {
-						int bucket = (triangles[a].centroid()[axis] - tcBB.min[axis]) / interval;
-						triangles_count[bucket + 1]++;
+						int bucket = (triangles[a].bbCentroid()[axis] - node->bb.min[axis]) / interval;
+						triangles_count[FW::clamp(bucket, 0, BUCKETS - 1)]++;
 					});
-				float plane = tcBB.min[axis];
+				float plane = node->bb.min[axis] + interval;
 				float leftTri = 0;
-				for (int i = 0; i <= BUCKETS + 1; ++i) {
-
+				for (int i = 0; i < BUCKETS - 1; ++i) {
+					//Start with case 1: the left node occupies the first bucket.
+					//End with case 7: the right node only occupies the last bucket
 					leftTri += triangles_count[i];
-					Vec3f leftBBMax = tcBB.max;
+					Vec3f leftBBMax = node->bb.max;
 					leftBBMax[axis] = plane;
-					AABB leftBB(tcBB.min, leftBBMax);
+					AABB leftBB(node->bb.min, leftBBMax);
 
-					Vec3f rightBBmin = tcBB.min;
+					Vec3f rightBBmin = node->bb.min;
 					rightBBmin[axis] = plane;
-					AABB rightBB(rightBBmin, tcBB.max);
+					AABB rightBB(rightBBmin, node->bb.max);
 
 					//Calculate: SAH = AL * NL + AR * NR.  This holds when if we stop splitting ealier when number of trianglers is smaller than a value
 					float SAH = leftTri * leftBB.area() + (node->endPrim - node->startPrim - leftTri) * rightBB.area();
@@ -201,17 +200,18 @@ namespace FW {
 			}
 
 			auto it = std::partition(indices_.begin() + node->startPrim, indices_.begin() + node->endPrim,
-				[&triangles, &minSAHAxis, &minPlane](int a) {return triangles[a].centroid()[minSAHAxis] < minPlane; });
+				[&triangles, &minSAHAxis, &minPlane](int a) {return triangles[a].bbCentroid()[minSAHAxis] < minPlane; });
 			partitionIndex = std::distance(indices_.begin(), it);
 		}
 		//
 #pragma endregion
 		if (partitionIndex == node->startPrim || partitionIndex == node->endPrim) {
+			//Still need to split
+			partitionIndex = node->startPrim + (node->endPrim - node->startPrim) / 2;
 			//printNodeInfo(node, triangles, splitMode, indices_, depth);
-			return;
 		}
 		node->left = std::make_unique<BvhNode>(node->startPrim, partitionIndex);
-		constructIterator(node->left, triangles, splitMode, indices_, depth);		
+		constructIterator(node->left, triangles, splitMode, indices_, depth);
 		node->right = std::make_unique<BvhNode>(partitionIndex, node->endPrim);
 		constructIterator(node->right, triangles, splitMode, indices_, depth);
 

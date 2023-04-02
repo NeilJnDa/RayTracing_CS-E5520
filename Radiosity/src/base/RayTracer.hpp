@@ -35,9 +35,9 @@ public:
 
     RaycastResult		raycast					(const Vec3f& orig, const Vec3f& dir) const;
 
-    bool                CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const;
+    bool                HasIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_min) const;
 
-    RaycastResult       raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const;
+    RaycastResult       raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_min) const;
 
     // This function computes an MD5 checksum of the input scene data,
     // WITH the assumption that all vertices are allocated in one big chunk.

@@ -10,8 +10,6 @@
 #include <stack>
 #include "rtlib.hpp"
 
-#define FLOAT_MAX 3.40282e+38
-#define FLOAT_MIN -3.40282e+38
 // Helper function for hashing scene data for caching BVHs
 extern "C" void MD5Buffer( void* buffer, size_t bufLen, unsigned int* pDigest );
 
@@ -125,9 +123,10 @@ RaycastResult RayTracer::raycast(const Vec3f& orig, const Vec3f& dir) const {
     // Integrate your implementation here.
 
     Vec3f reci_dir = 1.0f / dir;
-    return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root());
+	float t_min = 1.0f;
+    return raycastBvhIterator(orig, dir, reci_dir, m_bvh.root(), t_min);
 }
-bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_hit) const {
+bool RayTracer::HasIntersection(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_min) const {
 	//Check Intersections with AABB
 	//t1: ray inject hit.  t2: ray leave hit.
 	//Compute t1,t2 for each dimention, and make sure t1[i] < t2[i];
@@ -150,18 +149,23 @@ bool RayTracer::CheckIntersection(const Vec3f& orig, const Vec3f& dir, const Vec
 	// are inside this bouding box.
 	if (tstart > tend) return false;
 	if (tend < 0) return false;
-	if (tstart > 0 && tstart < 1) {
-		t_hit = tstart;
-		return true;
-	}
-	else if (tstart < 0) {
-		t_hit = tend;
-		return true;
-	}
+	if (tstart > t_min) return false;
+
+	return true;
+
+	//if (tstart > 0 && tstart < 1) {
+	//	t_hit = tstart;
+	//	return true;
+	//}
+	//else if (tstart < 0) {
+	//	t_hit = tend;
+	//	return true;
+	//}
 }
 
-RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node) const {
+RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir, const Vec3f& reci_dir, const BvhNode& node, float& t_min) const {
 	RaycastResult castresult;
+
 	if (!node.hasChildren()) {
 		//Do traversal in a leaf node
 		//t range [0,1]
@@ -175,7 +179,7 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
 			float t, u, v;
 			if ((*m_triangles)[m_bvh.getIndex(i)].intersect_woop(orig, dir, t, u, v))
 			{
-				if (t > 0.0f && t < closest_t)
+				if (t > 0.0f && t < t_min)
 				{
 					closest_i = i;
 					closest_t = t;
@@ -184,24 +188,27 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
 				}
 			}
 		}
-		if (closest_i != -1)
+		if (closest_i != -1) {
+			t_min = closest_t;
 			castresult = RaycastResult(&(*m_triangles)[m_bvh.getIndex(closest_i)], closest_t, closest_u, closest_v, orig + closest_t * dir, orig, dir);
+
+		}
 
 		return castresult;
 	}
 
+	float t_min_left = t_min, t_min_right = t_min;
+	bool hitLeft = HasIntersection(orig, dir, reci_dir, *node.left, t_min_left);
+	bool hitRight = HasIntersection(orig, dir, reci_dir, *node.right, t_min_right);
 
-	//Has intersections, Go deeper
-	float t_left_hit = FLOAT_MAX, t_right_hit = FLOAT_MAX;
-	bool hitLeft = false, hitRight = false;
-	hitLeft = CheckIntersection(orig, dir, reci_dir, *node.left, t_left_hit);
-	hitRight = CheckIntersection(orig, dir, reci_dir, *node.right, t_right_hit);
+
+
 	if (hitLeft && !hitRight)
 		//Only Hit Left
-		return raycastBvhIterator(orig, dir, reci_dir, *node.left);
+		return raycastBvhIterator(orig, dir, reci_dir, *node.left, t_min_left);
 	if (!hitLeft && hitRight)
 		//Only Hit Right
-		return raycastBvhIterator(orig, dir, reci_dir, *node.right);
+		return raycastBvhIterator(orig, dir, reci_dir, *node.right, t_min_right);
 	if (!hitLeft && !hitRight)
 		//Hit Nothing
 		return castresult;
@@ -210,22 +217,21 @@ RaycastResult RayTracer::raycastBvhIterator(const Vec3f& orig, const Vec3f& dir,
 	RaycastResult resultL, resultR;
 	//Otherwise, find the exact hit of both and compare.
 	//Traverse the closest node firstly
-	if (t_left_hit < t_right_hit) {
-		resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+	if (t_min_left < t_min_right) {
+		resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left, t_min_left);
 		//If the actual hit from the left is closer than hit of right BB, 
 		//and the right BB does not contain ray origin(otherwise it may have a closer triangle)
 		//then we don't need to go to right tree
-		if (resultL.t < t_right_hit && !node.right->bb.contains(orig)) return resultL;
-		resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
+		if (resultL.t < t_min_right && !node.right->bb.contains(orig)) return resultL;
+		resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right, t_min_right);
 		return resultL.t < resultR.t ? resultL : resultR;
 	}
 	else {
-		resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right);
-		if (resultR.t < t_left_hit && !node.left->bb.contains(orig)) return resultR;
-		resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left);
+		resultR = raycastBvhIterator(orig, dir, reci_dir, *node.right, t_min_right);
+		if (resultR.t < t_min_left && !node.left->bb.contains(orig)) return resultR;
+		resultL = raycastBvhIterator(orig, dir, reci_dir, *node.left, t_min_left);
 		return resultL.t < resultR.t ? resultL : resultR;
 	}
-
 }
 
 
